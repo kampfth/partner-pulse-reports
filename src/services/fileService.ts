@@ -1,4 +1,3 @@
-
 export interface FileUploadResponse {
   success: boolean;
   message: string;
@@ -66,53 +65,35 @@ export interface TransactionItem {
   lever: string;
   transactionDate: string;
   transactionAmountUSD: number;
+  earningDate?: string;
 }
 
 export async function processFile(filePath: string): Promise<ProcessedData> {
-  // Parse the file data
   return new Promise((resolve) => {
     setTimeout(() => {
       // In a real implementation, this would read from the actual CSV file
-      // For now, we'll use realistic mock data
+      // For now, we'll use realistic mock data to demonstrate the CSV processing logic
       const mockCSVData: TransactionItem[] = [
         { 
-          productId: "FS001", 
-          productName: "Weather Preset Pack", 
-          lever: "Flight Simulator Marketplace", 
-          transactionDate: "2023-05-15", 
-          transactionAmountUSD: 239.94 
+          productId: "59FFGY-F28HVF2", // Column 1AG
+          productName: "Weather Pack", // Column 1AF
+          lever: "Microsoft Flight Simulator 2024", // Column M1
+          transactionDate: "2025-04-16", // Column I1 (cleaned date)
+          transactionAmountUSD: 239.94, // Column K1
+          earningDate: "2025-04-16" // Column U1 (cleaned date)
         },
         { 
-          productId: "FS002", 
-          productName: "City Landmarks", 
-          lever: "Flight Simulator Marketplace", 
-          transactionDate: "2023-06-20", 
-          transactionAmountUSD: 89.97 
-        },
-        { 
-          productId: "FS003", 
-          productName: "Livery Collection", 
-          lever: "Microsoft Flight Simulator 2024", 
-          transactionDate: "2023-06-25", 
-          transactionAmountUSD: 124.95 
-        },
-        { 
-          productId: "FS004", 
-          productName: "Livery Collection", 
-          lever: "Flight Simulator Marketplace", 
-          transactionDate: "2023-07-10", 
-          transactionAmountUSD: 149.95 
+          productId: "XKHY78-P23MNB4",
+          productName: "Weather Pack",
+          lever: "Flight Simulator Marketplace",
+          transactionDate: "2025-04-16",
+          transactionAmountUSD: 89.97,
+          earningDate: "2025-04-16"
         }
       ];
       
-      // Mock existing products - in real implementation this would come from DB_Products.json
-      const existingProducts: ProductItem[] = [
-        { productId: "FS001", productName: "Weather Preset Pack", date: "2023-05-15", isEcho: true },
-        { productId: "FS004", productName: "Livery Collection", date: "2023-07-10", isEcho: false },
-      ];
-      
       // Process transaction data according to business rules
-      let updatedProducts = [...existingProducts];
+      let updatedProducts: ProductItem[] = [];
       
       mockCSVData.forEach(transaction => {
         // Skip rows missing productId or productName
@@ -120,28 +101,36 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
           return;
         }
         
-        // Check if product exists
+        // Clean date format (remove timezone part)
+        const cleanDate = (dateStr: string) => {
+          if (dateStr.includes('T')) {
+            return dateStr.split('T')[0];
+          }
+          return dateStr;
+        };
+        
+        let productName = transaction.productName;
+        
+        // If lever is Microsoft Flight Simulator 2024, append (2024) to name
+        if (transaction.lever === "Microsoft Flight Simulator 2024") {
+          const existingProduct = updatedProducts.find(p => 
+            p.productName === transaction.productName && 
+            !p.productName.includes('(2024)')
+          );
+          
+          if (existingProduct || updatedProducts.some(p => p.productName === productName)) {
+            productName += " (2024)";
+          }
+        }
+        
+        // Create or update product entry
         const existingProduct = updatedProducts.find(p => p.productId === transaction.productId);
         
         if (!existingProduct) {
-          // Create new product entry
-          let newProductName = transaction.productName;
-          
-          // If lever contains "Microsoft Flight Simulator 2024" and a product with same name exists, append (2024)
-          if (transaction.lever === "Microsoft Flight Simulator 2024") {
-            const similarProduct = updatedProducts.find(p => 
-              p.productName === transaction.productName && p.productId !== transaction.productId
-            );
-            
-            if (similarProduct) {
-              newProductName += " (2024)";
-            }
-          }
-          
           const newProduct = {
             productId: transaction.productId,
-            productName: newProductName,
-            date: transaction.transactionDate,
+            productName: productName,
+            date: cleanDate(transaction.earningDate), // Use earning date from column U1
             isEcho: false // Default new products to non-echo
           };
           
@@ -159,4 +148,24 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
       });
     }, 2000);
   });
+}
+
+export interface ProcessedData {
+  products: ProductItem[];
+  transactions: TransactionItem[];
+}
+
+export interface ProductItem {
+  productId: string;
+  productName: string;
+  date: string;
+  isEcho: boolean;
+}
+
+export interface TransactionItem {
+  productId: string;
+  productName: string;
+  lever: string;
+  transactionDate: string;
+  transactionAmountUSD: number;
 }
