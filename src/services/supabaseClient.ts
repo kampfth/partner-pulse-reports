@@ -1,9 +1,25 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-// As variáveis de ambiente SUPABASE_URL e SUPABASE_ANON_KEY estão disponíveis automaticamente para o projeto Lovable integrado.
-// Se necessário, ajuste para sua configuração.
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+// Check if environment variables are available and provide fallbacks if needed
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Validate that we have the required configuration
+if (!supabaseUrl) {
+  console.error("Missing VITE_SUPABASE_URL environment variable");
+}
+
+if (!supabaseAnonKey) {
+  console.error("Missing VITE_SUPABASE_ANON_KEY environment variable");
+}
+
+// Create the Supabase client with appropriate error handling
+export const supabase = createClient(
+  supabaseUrl || "",
+  supabaseAnonKey || ""
+);
+
+// Log connection status for debugging
+console.log("Supabase connection status:", supabaseUrl ? "URL configured" : "URL missing", 
+  supabaseAnonKey ? "Key configured" : "Key missing");
