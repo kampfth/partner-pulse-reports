@@ -1,4 +1,3 @@
-
 import { ProductItem, TransactionItem } from './fileService';
 
 export interface ReportItem {
@@ -69,18 +68,13 @@ export async function generateReport(
 }
 
 export async function getProductDictionary(): Promise<ProductItem[]> {
-  // Simulate fetching the product dictionary from DB_Products.json
+  // In a real implementation, this would fetch from DB_Products.json
   return new Promise((resolve) => {
     setTimeout(() => {
-      // Match the exact data from the provided screenshot
+      // This is just placeholder data
       const mockDictionary = [
-        { productId: "P-123", productName: "Microsoft Flight Simulator 2024", date: "2023-05-15", isEcho: true },
-        { productId: "P-456", productName: "Microsoft Office 365 Enterprise", date: "2022-11-03", isEcho: false },
-        { productId: "P-789", productName: "Azure Cloud Services Premium", date: "2023-02-21", isEcho: true },
-        { productId: "P-012", productName: "Windows 11 Pro", date: "2022-09-17", isEcho: false },
-        { productId: "P-345", productName: "Microsoft Dynamics 365", date: "2023-01-09", isEcho: false },
-        { productId: "P-567", productName: "Weather Presets", date: "2023-06-12", isEcho: false },
-        { productId: "P-678", productName: "Airliner Pack (2024)", date: "2023-07-20", isEcho: false },
+        { productId: "PROD1", productName: "Sample Product 1", date: "2023-05-15", isEcho: true },
+        { productId: "PROD2", productName: "Sample Product 2", date: "2023-06-20", isEcho: false },
       ];
       
       resolve(mockDictionary);
@@ -88,62 +82,26 @@ export async function getProductDictionary(): Promise<ProductItem[]> {
   });
 }
 
-// New function to get transaction data
 export async function getTransactions(): Promise<TransactionItem[]> {
-  // Simulate fetching transaction data from uploads/latest.csv
+  // In a real implementation, this would fetch from uploads/latest.csv
   return new Promise((resolve) => {
     setTimeout(() => {
-      // Match the exact data from the provided report screenshot
+      // This is just placeholder data
       const mockTransactions = [
         { 
-          productId: "P-789", 
-          productName: "Azure Cloud Services Premium", 
-          lever: "Azure", 
-          transactionDate: "2023-02-21", 
-          transactionAmountUSD: 2543.75 
-        },
-        { 
-          productId: "P-345", 
-          productName: "Microsoft Dynamics 365", 
-          lever: "Dynamics", 
-          transactionDate: "2023-01-09", 
-          transactionAmountUSD: 1652.25 
-        },
-        { 
-          productId: "P-123", 
-          productName: "Microsoft Flight Simulator 2024", 
-          lever: "Microsoft Flight Simulator 2024", 
+          productId: "PROD1", 
+          productName: "Sample Product 1", 
+          lever: "Sample Category", 
           transactionDate: "2023-05-15", 
-          transactionAmountUSD: 1249.99 
+          transactionAmountUSD: 150.00 
         },
         { 
-          productId: "P-456", 
-          productName: "Microsoft Office 365 Enterprise", 
-          lever: "Office", 
-          transactionDate: "2022-11-03", 
-          transactionAmountUSD: 899.50 
-        },
-        { 
-          productId: "P-012", 
-          productName: "Windows 11 Pro", 
-          lever: "Windows", 
-          transactionDate: "2022-09-17", 
-          transactionAmountUSD: 321.00 
-        },
-        { 
-          productId: "P-567", 
-          productName: "Weather Presets", 
-          lever: "Microsoft Flight Simulator", 
-          transactionDate: "2023-06-12", 
-          transactionAmountUSD: 123.45 
-        },
-        { 
-          productId: "P-678", 
-          productName: "Airliner Pack", 
+          productId: "PROD2", 
+          productName: "Sample Product 2", 
           lever: "Microsoft Flight Simulator 2024", 
-          transactionDate: "2023-07-20", 
-          transactionAmountUSD: 98.00 
-        },
+          transactionDate: "2023-06-20", 
+          transactionAmountUSD: 75.50 
+        }
       ];
       
       resolve(mockTransactions);
