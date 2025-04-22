@@ -16,9 +16,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       'X-Client-Info': 'partnerpulse',
     },
   },
-  db: {
-    schema: 'public',
-  },
   realtime: {
     timeout: 60000,
   },

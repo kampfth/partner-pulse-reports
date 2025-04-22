@@ -9,6 +9,8 @@ export interface FileUploadResponse {
 }
 
 export async function uploadFile(file: File): Promise<FileUploadResponse> {
+  console.log(`Uploading file: ${file.name} (${file.type}, ${file.size} bytes)`);
+  
   return new Promise((resolve) => {
     // Check if file is CSV or ZIP
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
@@ -86,9 +88,10 @@ function formatDate(dateString: string): string {
 
 // Helper function to parse CSV data
 function parseCSVData(csvContent: string): TransactionItem[] {
-  // Para esta demonstração, vamos gerar dados mais realistas com datas ISO
+  // Generate realistic sample data with ISO dates (2025-04-16T20:19:09.000Z format)
   const today = new Date().toISOString();
   const yesterday = new Date(Date.now() - 86400000).toISOString();
+  const twoDaysAgo = new Date(Date.now() - 2*86400000).toISOString();
   
   const mockItems: TransactionItem[] = [
     {
@@ -131,10 +134,10 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productId: "7403E8B-F1D6-437A-A3CE-0B26FC0700E",
       productName: "A320 v2 Europe",
       lever: "Microsoft Flight Simulator 2024",
-      transactionDate: today,
+      transactionDate: twoDaysAgo,
       transactionAmount: 100,
       transactionAmountUSD: 100,
-      earningDate: today
+      earningDate: twoDaysAgo
     },
     {
       productId: "5091738E-339E-48AE-AA68-D4370D5F957",
@@ -163,6 +166,8 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
   let existingDictionary: ProductItem[] = [];
   
   try {
+    console.log("Process file initiated for path:", filePath);
+    
     // Fetch products from database
     const { data, error } = await supabase
       .from(dbConfig.tables.products)
@@ -187,10 +192,9 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
   return new Promise((resolve) => {
     // Simulate processing time
     setTimeout(() => {
-      // In a real implementation, this would read from the actual CSV file
-      // For now, we'll use realistic mock data to demonstrate the CSV processing logic
+      console.log("Generating mock data...");
       
-      // Simulate CSV parsing (usando os dados do seu arquivo JSON de exemplo)
+      // Simulate CSV parsing with our mock data
       const csvContent = "mock csv content";
       const transactions = parseCSVData(csvContent);
       
@@ -204,7 +208,7 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
           return;
         }
         
-        // Format dates properly
+        // Format dates properly (important for ISO dates like 2025-04-16T20:19:09.000Z)
         const transactionDate = formatDate(transaction.transactionDate);
         const earningDate = transaction.earningDate ? formatDate(transaction.earningDate) : transactionDate;
         
@@ -261,56 +265,56 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
       console.log("Processed products:", updatedProducts.length);
       console.log("Processed transactions:", transactions.length);
       
-      // Usar os dados do JSON do dicionário que o usuário enviou
-      const dictionaryProducts = [
+      // Additional sample dictionary products
+      const dictionaryProducts: ProductItem[] = [
         {
           productId: "7403E8B-F1D6-437A-A3CE-0B26FC0700D",
           productName: "A320 v2 Europe Liveries",
-          date: "2025-04-22",
-          isEcho: false
+          date: formatDate(new Date().toISOString()),
+          isEcho: true
         },
         {
           productId: "E31C520F-1855-453C-89E9-73C0A3598FD",
           productName: "Liveries Collection",
-          date: "2025-04-22",
-          isEcho: false
+          date: formatDate(new Date().toISOString()),
+          isEcho: true
         },
         {
           productId: "A060DE58-D876-47EF-B1C2-42E0483045",
           productName: "A320 v2 North America Liveries",
-          date: "2025-04-22",
+          date: formatDate(new Date().toISOString()),
           isEcho: false
         },
         {
           productId: "DECB769C-9265-4D96-931B-FACD45524F19",
           productName: "REALISTIC VEHICLES",
-          date: "2025-04-22",
+          date: formatDate(new Date().toISOString()),
           isEcho: false
         },
         {
           productId: "5D6173E-339E-49AE-AA68-0437D4D5F857",
           productName: "A320 v2 NA & EU Collection",
-          date: "2025-04-22",
-          isEcho: false
+          date: formatDate(new Date().toISOString()),
+          isEcho: true
         },
         {
           productId: "F5F644FB-82EB-49C2-8BCD-260250D1908",
           productName: "Weather Presets Advanced",
-          date: "2025-04-22",
+          date: formatDate(new Date().toISOString()),
           isEcho: false
         },
         {
           productId: "8EC147BB-4ED7-42C2-80D2-58E8751B020F",
           productName: "Landing Rate",
-          date: "2025-04-22",
-          isEcho: false
+          date: formatDate(new Date().toISOString()),
+          isEcho: true
         }
       ];
       
-      // Combinar os produtos processados com os do dicionário
+      // Combine the products 
       const combinedProducts = [...updatedProducts, ...dictionaryProducts];
       
-      // Criar transações para corresponder aos produtos do dicionário
+      // Create transactions for dictionary products
       const today = new Date().toISOString();
       const additionalTransactions = dictionaryProducts.map(product => ({
         productId: product.productId,
@@ -322,7 +326,7 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
         earningDate: today
       }));
       
-      // Combinar as transações
+      // Combine the transactions
       const combinedTransactions = [...transactions, ...additionalTransactions];
       
       resolve({

@@ -20,41 +20,24 @@ const FileUpload = () => {
     setUploading(true);
 
     try {
-      // Leitura do arquivo para garantir que ele é válido
-      const fileReader = new FileReader();
-      fileReader.readAsText(file);
+      console.log("Starting file upload:", file.name, file.type, file.size);
+      // Perform the actual file upload
+      const response = await uploadFile(file);
       
-      fileReader.onload = async () => {
-        // Verificar se o arquivo tem conteúdo
-        if (typeof fileReader.result !== 'string' || !fileReader.result.trim()) {
-          toast.error('O arquivo enviado está vazio');
-          setUploading(false);
-          return;
+      if (response.success) {
+        setFileStatus('uploaded');
+        if (response.filePath) {
+          setUploadedFilePath(response.filePath);
+          console.log("File uploaded successfully:", response.filePath);
         }
-        
-        // Se chegamos aqui, o arquivo é válido
-        const response = await uploadFile(file);
-        
-        if (response.success) {
-          setFileStatus('uploaded');
-          if (response.filePath) {
-            setUploadedFilePath(response.filePath);
-            console.log("File uploaded successfully:", response.filePath);
-          }
-          toast.success('File uploaded successfully');
-        } else {
-          toast.error(response.message || 'Error uploading file');
-        }
-        setUploading(false);
-      };
-      
-      fileReader.onerror = () => {
-        toast.error('Error reading file');
-        setUploading(false);
-      };
+        toast.success('File uploaded successfully');
+      } else {
+        toast.error(response.message || 'Error uploading file');
+      }
     } catch (error) {
+      console.error("File upload error:", error);
       toast.error('Error uploading file');
-      console.error(error);
+    } finally {
       setUploading(false);
     }
   };

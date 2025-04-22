@@ -8,7 +8,6 @@ import { useAppContext } from '@/context/AppContext';
 import { processFile } from '@/services/fileService';
 import { updateProductFromCSV } from '@/services/reportService';
 import { toast } from 'sonner';
-import { supabase } from '@/services/supabaseClient';
 
 const FilterForm = () => {
   const { 
@@ -33,6 +32,7 @@ const FilterForm = () => {
       const today = new Date();
       const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
       const formattedFirstDay = firstDay.toISOString().split('T')[0];
+      console.log("Setting default start date:", formattedFirstDay);
       setStartDate(formattedFirstDay);
     }
 
@@ -40,6 +40,7 @@ const FilterForm = () => {
       // Get today's date
       const today = new Date();
       const formattedToday = today.toISOString().split('T')[0];
+      console.log("Setting default end date:", formattedToday);
       setEndDate(formattedToday);
     }
   }, [startDate, endDate, setStartDate, setEndDate]);
@@ -59,14 +60,14 @@ const FilterForm = () => {
     setFileStatus('processing');
 
     try {
+      console.log("Processing file:", uploadedFilePath);
+      
       // Process the uploaded file
       const processedData = await processFile(uploadedFilePath);
       console.log("Processed data", { 
         productsCount: processedData.products.length, 
         transactionsCount: processedData.transactions.length 
       });
-      
-      console.log("Transactions data sample:", processedData.transactions[0]);
       
       // Update product dictionary with new data
       const result = await updateProductFromCSV(processedData);
@@ -75,11 +76,16 @@ const FilterForm = () => {
         setFileStatus('processed');
         toast.success('File processed successfully');
       } else {
+        console.error("Failed to save data to Supabase");
         // Even if there's an error saving to database, we'll still consider the file processed
         // so Reports tab becomes available
         setFileStatus('processed');
         toast.warning('File processed but there were issues saving to the database. Reports may not display correctly.');
       }
+      
+      // Always make reports available
+      setActiveSection('reports');
+      
     } catch (error) {
       console.error("Processing error:", error);
       toast.error('Error processing file');
@@ -91,9 +97,7 @@ const FilterForm = () => {
   };
 
   const handleViewReport = () => {
-    if (fileStatus === 'processed') {
-      setActiveSection('reports');
-    }
+    setActiveSection('reports');
   };
 
   return (
