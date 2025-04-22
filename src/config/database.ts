@@ -18,29 +18,62 @@ export const dbConfig: DatabaseConfig = {
   }
 };
 
-// Function to check if required tables exist
-export async function checkDatabaseSetup(): Promise<boolean> {
+// Função para criar tabela usando SQL
+async function createTableIfMissing(tableName: string, sql: string): Promise<boolean> {
+  // Tentativa de criar a tabela via função SQL do Supabase
+  // A função 'rpc' abaixo utiliza a função interna "execute_sql" (disponível apenas em alguns planos/configurações do Supabase)
   try {
-    // Check if products table exists
-    const { data: productsData, error: productsError } = await supabase
+    const { error } = await supabase.rpc('execute_sql', { sql });
+    if (error) {
+      // Alguns ambientes Supabase não tem a função 'execute_sql' ativada, fallback tentará pelo endpoint /rest/v1/rpc/execute_sql
+      // Se nem isso funcionar, retorna erro.
+      console.error(`Erro ao criar tabela ${tableName}:`, error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error(`Exceção ao criar tabela ${tableName}:`, e);
+    return false;
+  }
+}
+
+// Função que verifica e cria as tabelas caso não existam:
+export async function checkDatabaseSetupAndAutoCreate(): Promise<boolean> {
+  try {
+    // Checa products
+    let tablesExist = true;
+
+    const { error: productsError } = await supabase
       .from(dbConfig.tables.products)
       .select('count(*)', { count: 'exact', head: true });
-    
-    // Check if transactions table exists
-    const { data: transactionsData, error: transactionsError } = await supabase
+    if (productsError) {
+      tablesExist = false;
+      const productsCreated = await createTableIfMissing('products', createTableStatements.products);
+      if (!productsCreated) return false;
+    }
+
+    const { error: transactionsError } = await supabase
       .from(dbConfig.tables.transactions)
       .select('count(*)', { count: 'exact', head: true });
-    
-    // Check if echo_products table exists
-    const { data: echoProductsData, error: echoProductsError } = await supabase
+    if (transactionsError) {
+      tablesExist = false;
+      const txCreated = await createTableIfMissing('transactions', createTableStatements.transactions);
+      if (!txCreated) return false;
+    }
+
+    const { error: echoProductsError } = await supabase
       .from(dbConfig.tables.echoProducts)
       .select('count(*)', { count: 'exact', head: true });
-    
-    const tablesExist = !productsError && !transactionsError && !echoProductsError;
-    
-    return tablesExist;
+    if (echoProductsError) {
+      tablesExist = false;
+      const echoCreated = await createTableIfMissing('echo_products', createTableStatements.echoProducts);
+      if (!echoCreated) return false;
+    }
+
+    // Após garantir as tabelas, retorna true se todas existem/agora existem
+    return true;
   } catch (error) {
-    console.error("Error checking database setup:", error);
+    console.error("Erro ao checar/criar tabelas no banco:", error);
     return false;
   }
 }
@@ -48,7 +81,7 @@ export async function checkDatabaseSetup(): Promise<boolean> {
 // SQL statements for creating required tables (for reference)
 export const createTableStatements = {
   products: `
-    CREATE TABLE products (
+    CREATE TABLE IF NOT EXISTS products (
       id SERIAL PRIMARY KEY,
       "productId" TEXT UNIQUE NOT NULL,
       "productName" TEXT NOT NULL,
@@ -57,7 +90,7 @@ export const createTableStatements = {
     );
   `,
   transactions: `
-    CREATE TABLE transactions (
+    CREATE TABLE IF NOT EXISTS transactions (
       id SERIAL PRIMARY KEY,
       "productId" TEXT NOT NULL,
       "productName" TEXT NOT NULL,
@@ -70,7 +103,7 @@ export const createTableStatements = {
     );
   `,
   echoProducts: `
-    CREATE TABLE echo_products (
+    CREATE TABLE IF NOT EXISTS echo_products (
       id SERIAL PRIMARY KEY,
       "productId" TEXT UNIQUE NOT NULL,
       "productName" TEXT NOT NULL,
@@ -79,3 +112,4 @@ export const createTableStatements = {
     );
   `
 };
+
