@@ -4,8 +4,10 @@ import { generateReport, ReportItem } from '@/services/reportService';
 import { useAppContext } from '@/context/AppContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Copy, Calendar } from 'lucide-react';
 
 const ReportTable = () => {
   const { startDate, endDate, echoOnly } = useAppContext();
@@ -39,6 +41,19 @@ const ReportTable = () => {
     fetchReport();
   }, [startDate, endDate, echoOnly]);
 
+  const handleCopyValues = () => {
+    const formattedData = reportData.map(item => 
+      `${item.name}: ${formatCurrency(item.total)}`
+    ).join('\n');
+    
+    const totalSum = reportData.reduce((sum, item) => sum + item.total, 0);
+    const summary = `Sales Report (${startDate || 'All time'} to ${endDate || 'Present'})\n\n${formattedData}\n\nTotal: ${formatCurrency(totalSum)}`;
+    
+    navigator.clipboard.writeText(summary)
+      .then(() => toast.success('Report data copied to clipboard'))
+      .catch(() => toast.error('Failed to copy data'));
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -56,14 +71,31 @@ const ReportTable = () => {
   }
 
   const totalAmount = reportData.reduce((sum, item) => sum + item.total, 0);
+  const dateRange = startDate && endDate 
+    ? `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`
+    : 'All time';
 
   return (
     <div className="glass-card rounded-lg p-6 h-full flex flex-col">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-medium">Sales Report</h2>
-        <div className="text-right">
-          <p className="text-sm text-muted-foreground">Total Products: {totalItems}</p>
-          <p className="text-xl font-bold">{formatCurrency(totalAmount)}</p>
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-medium">Sales Report</h2>
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground">Total Products: {totalItems}</p>
+            <p className="text-xl font-bold">{formatCurrency(totalAmount)}</p>
+          </div>
+        </div>
+        
+        <div className="flex gap-4 items-center">
+          <Button variant="outline" className="gap-2">
+            <Calendar className="h-4 w-4" />
+            {dateRange}
+          </Button>
+          
+          <Button variant="secondary" onClick={handleCopyValues} className="gap-2">
+            <Copy className="h-4 w-4" />
+            Copy values
+          </Button>
         </div>
       </div>
       
