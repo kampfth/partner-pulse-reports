@@ -18,91 +18,44 @@ export const dbConfig: DatabaseConfig = {
   }
 };
 
-// Função para criar tabela usando SQL
-async function createTableIfMissing(tableName: string, sql: string): Promise<boolean> {
-  // Tentativa de criar a tabela via função SQL do Supabase
-  try {
-    // Fallback usando o método restante RPC direto
-    const { error } = await supabase.rpc('execute_sql', { sql });
-    if (error) {
-      console.error(`Erro ao criar tabela ${tableName}:`, error);
-      
-      // Tentativa alternativa usando REST API (createTable)
-      try {
-        const { data, error: createError } = await supabase
-          .from('_meta')
-          .select('*')
-          .then(() => ({
-            data: null,
-            error: null
-          }))
-          .catch(() => {
-            // Executar SQL diretamente (em alguns ambientes Supabase)
-            return supabase.auth.admin.createTable({ tableName, sql });
-          });
-          
-        if (createError) {
-          console.error(`Erro na segunda tentativa de criar ${tableName}:`, createError);
-          return false;
-        }
-        
-        return true;
-      } catch (fallbackError) {
-        console.error(`Erro completo ao tentar criar ${tableName}:`, fallbackError);
-        return false;
-      }
-    }
-    
-    console.log(`Tabela ${tableName} criada com sucesso!`);
-    return true;
-  } catch (e) {
-    console.error(`Exceção ao criar tabela ${tableName}:`, e);
-    return false;
-  }
-}
-
-// Função que verifica e cria as tabelas caso não existam:
+// Função que verifica se as tabelas existem (não tenta criar)
 export async function checkDatabaseSetupAndAutoCreate(): Promise<boolean> {
-  try {
-    // Checa products
-    let tablesExist = true;
-
-    const { error: productsError } = await supabase
-      .from(dbConfig.tables.products)
-      .select('count(*)', { count: 'exact', head: true });
-    if (productsError) {
-      tablesExist = false;
-      const productsCreated = await createTableIfMissing('products', createTableStatements.products);
-      if (!productsCreated) return false;
-    }
-
-    const { error: transactionsError } = await supabase
-      .from(dbConfig.tables.transactions)
-      .select('count(*)', { count: 'exact', head: true });
-    if (transactionsError) {
-      tablesExist = false;
-      const txCreated = await createTableIfMissing('transactions', createTableStatements.transactions);
-      if (!txCreated) return false;
-    }
-
-    const { error: echoProductsError } = await supabase
-      .from(dbConfig.tables.echoProducts)
-      .select('count(*)', { count: 'exact', head: true });
-    if (echoProductsError) {
-      tablesExist = false;
-      const echoCreated = await createTableIfMissing('echo_products', createTableStatements.echoProducts);
-      if (!echoCreated) return false;
-    }
-
-    // Após garantir as tabelas, retorna true se todas existem/agora existem
-    return true;
-  } catch (error) {
-    console.error("Erro ao checar/criar tabelas no banco:", error);
-    return false;
+  let tablesExist = true;
+  let missingTables: string[] = [];
+  // Checa products
+  const { error: productsError } = await supabase
+    .from(dbConfig.tables.products)
+    .select('count(*)', { count: 'exact', head: true });
+  if (productsError) {
+    tablesExist = false;
+    missingTables.push('products');
   }
+
+  const { error: transactionsError } = await supabase
+    .from(dbConfig.tables.transactions)
+    .select('count(*)', { count: 'exact', head: true });
+  if (transactionsError) {
+    tablesExist = false;
+    missingTables.push('transactions');
+  }
+
+  const { error: echoProductsError } = await supabase
+    .from(dbConfig.tables.echoProducts)
+    .select('count(*)', { count: 'exact', head: true });
+  if (echoProductsError) {
+    tablesExist = false;
+    missingTables.push('echo_products');
+  }
+
+  // Log if tables are missing
+  if (!tablesExist) {
+    console.warn("Tabelas não encontradas:", missingTables);
+  }
+
+  return tablesExist;
 }
 
-// SQL statements for creating required tables (updated to match Supabase tables)
+// SQL statements for creating required tables (opcional, para mostrar ao usuário)
 export const createTableStatements = {
   products: `
     CREATE TABLE IF NOT EXISTS products (

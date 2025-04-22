@@ -1,36 +1,53 @@
 
 import { useEffect, useState } from 'react';
-import { checkDatabaseSetupAndAutoCreate } from '@/config/database';
+import { checkDatabaseSetupAndAutoCreate, createTableStatements } from '@/config/database';
 import { isSupabaseConfigured } from '@/services/supabaseClient';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Terminal } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
 const DatabaseStatus = () => {
   const [isConfigured, setIsConfigured] = useState<boolean | null>(null);
-  const [tablesCreatedOrOk, setTablesCreatedOrOk] = useState<boolean | null>(null);
+  const [tablesReady, setTablesReady] = useState<boolean | null>(null);
   const [checking, setChecking] = useState(false);
   const [autoCreateMsg, setAutoCreateMsg] = useState<string | null>(null);
 
   useEffect(() => {
     checkConfiguration();
+    // eslint-disable-next-line
   }, []);
 
   const checkConfiguration = async () => {
     setChecking(true);
-    
+
     // Check if Supabase is configured with valid credentials
     const configStatus = isSupabaseConfigured();
     setIsConfigured(configStatus);
-    
+
     if (configStatus) {
-      // Tenta checar e criar as tabelas automaticamente
+      // Verifica se as tabelas existem
       const dbStatus = await checkDatabaseSetupAndAutoCreate();
-      setTablesCreatedOrOk(dbStatus);
-      setAutoCreateMsg(!dbStatus ? "Erro ao criar/verificar as tabelas do banco. Veja o console para detalhes ou cheque as permissões do Supabase." :
-        "Todas as tabelas necessárias foram verificadas e/ou criadas com sucesso.");
+      setTablesReady(dbStatus);
+      if (dbStatus) {
+        setAutoCreateMsg("Todas as tabelas necessárias foram encontradas no banco de dados e estão prontas para uso.");
+      } else {
+        setAutoCreateMsg(
+          <>
+            <span className="font-semibold text-red-700">Alguma(s) tabela(s) obrigatória(s) não foi/foram encontrada(s) no banco de dados.</span>
+            <br />
+            <span className="block mt-2">Copie e cole estes comandos no SQL Editor do seu painel Supabase para criar as tabelas:</span>
+            <pre className="mt-2 p-2 bg-slate-900 text-white text-xs rounded overflow-auto">
+{createTableStatements.products}
+{createTableStatements.transactions}
+{createTableStatements.echoProducts}
+            </pre>
+            <p className="mt-2 text-sm">
+              Após criar as tabelas pelo painel, clique em <b>Verificar novamente</b>.
+            </p>
+          </>
+        );
+      }
     }
-    
     setChecking(false);
   };
 
@@ -63,15 +80,15 @@ const DatabaseStatus = () => {
     );
   }
 
-  // Exibe alerta sucesso/erro pós criação automática
+  // Exibe alerta sucesso/erro pós checagem de tabelas
   return (
-    <Alert variant={tablesCreatedOrOk ? "default" : "destructive"} className={`my-4 ${tablesCreatedOrOk ? "bg-green-500/10 border-green-500 text-green-700" : ""}`}>
-      {tablesCreatedOrOk
+    <Alert variant={tablesReady ? "default" : "destructive"} className={`my-4 ${tablesReady ? "bg-green-500/10 border-green-500 text-green-700" : ""}`}>
+      {tablesReady
         ? (<CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />)
         : (<AlertCircle className="h-4 w-4 mr-2" />)
       }
       <AlertTitle>
-        {tablesCreatedOrOk ? "Banco pronto para uso" : "Erro ao criar/verificar tabelas"}
+        {tablesReady ? "Banco pronto para uso" : "Tabelas não encontradas"}
       </AlertTitle>
       <AlertDescription>
         {autoCreateMsg}

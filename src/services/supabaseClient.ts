@@ -13,6 +13,5 @@ console.log("Supabase connection initialized with provided credentials");
 
 // Helper function to check if Supabase connection is properly configured
 export const isSupabaseConfigured = () => {
-  return supabaseUrl !== "" && supabaseAnonKey !== "";
+  return !!(supabaseUrl && supabaseAnonKey); // Checa se ambos são verdadeiros (não vazios)
 };
-
