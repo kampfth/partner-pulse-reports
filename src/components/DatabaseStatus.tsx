@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { checkDatabaseSetupAndAutoCreate, createTableStatements } from '@/config/database';
 import { isSupabaseConfigured } from '@/services/supabaseClient';
-import { AlertCircle, CheckCircle2, Terminal } from 'lucide-react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
@@ -31,24 +31,31 @@ const DatabaseStatus = () => {
       if (dbStatus) {
         setAutoCreateMsg("Todas as tabelas necessárias foram encontradas no banco de dados e estão prontas para uso.");
       } else {
-        setAutoCreateMsg(
-          <>
-            <span className="font-semibold text-red-700">Alguma(s) tabela(s) obrigatória(s) não foi/foram encontrada(s) no banco de dados.</span>
-            <br />
-            <span className="block mt-2">Copie e cole estes comandos no SQL Editor do seu painel Supabase para criar as tabelas:</span>
-            <pre className="mt-2 p-2 bg-slate-900 text-white text-xs rounded overflow-auto">
-{createTableStatements.products}
-{createTableStatements.transactions}
-{createTableStatements.echoProducts}
-            </pre>
-            <p className="mt-2 text-sm">
-              Após criar as tabelas pelo painel, clique em <b>Verificar novamente</b>.
-            </p>
-          </>
-        );
+        // Fix: Don't use JSX Element directly in setState - use string instead
+        setAutoCreateMsg("Alguma(s) tabela(s) obrigatória(s) não foi/foram encontrada(s) no banco de dados.");
       }
     }
     setChecking(false);
+  };
+
+  // Render SQL statements separately from state
+  const renderSQLInstructions = () => {
+    if (!tablesReady && isConfigured) {
+      return (
+        <>
+          <span className="block mt-2">Copie e cole estes comandos no SQL Editor do seu painel Supabase para criar as tabelas:</span>
+          <pre className="mt-2 p-2 bg-slate-900 text-white text-xs rounded overflow-auto">
+{createTableStatements.products}
+{createTableStatements.transactions}
+{createTableStatements.echoProducts}
+          </pre>
+          <p className="mt-2 text-sm">
+            Após criar as tabelas pelo painel, clique em <b>Verificar novamente</b>.
+          </p>
+        </>
+      );
+    }
+    return null;
   };
 
   if (isConfigured === null || checking) {
@@ -92,6 +99,7 @@ const DatabaseStatus = () => {
       </AlertTitle>
       <AlertDescription>
         {autoCreateMsg}
+        {renderSQLInstructions()}
         <div className="mt-2">
           <Button size="sm" onClick={checkConfiguration}>
             Verificar novamente

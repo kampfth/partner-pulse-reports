@@ -9,9 +9,9 @@ const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Log connection status for debugging
-console.log("Supabase connection initialized with provided credentials");
+console.log("Supabase connection initialized");
 
 // Helper function to check if Supabase connection is properly configured
 export const isSupabaseConfigured = () => {
-  return !!(supabaseUrl && supabaseAnonKey); // Checa se ambos são verdadeiros (não vazios)
+  return !!(supabaseUrl && supabaseAnonKey);
 };
