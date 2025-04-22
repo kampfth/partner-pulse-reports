@@ -1,4 +1,3 @@
-
 import { ProductItem, TransactionItem } from './fileService';
 
 export interface ReportItem {
@@ -12,11 +11,15 @@ export async function generateReport(
   endDate?: string,
   echoOnly?: boolean
 ): Promise<ReportItem[]> {
+  console.log("Generating report with filters:", { startDate, endDate, echoOnly });
+  
   // First get the product dictionary
   const dictionary = await getProductDictionary();
+  console.log("Dictionary loaded:", dictionary.length, "products");
   
   // Get transactions data
   const transactions = await getTransactions();
+  console.log("Transactions loaded:", transactions.length, "transactions");
   
   // Filter transactions based on date range and other criteria
   const filteredTransactions = transactions.filter(transaction => {
@@ -44,12 +47,21 @@ export async function generateReport(
     return true;
   });
   
+  console.log("Filtered transactions:", filteredTransactions.length);
+  
   // Group transactions by productId and sum amounts
   const productTotals = new Map<string, { amount: number; name: string }>();
   
   filteredTransactions.forEach(transaction => {
-    const currentEntry = productTotals.get(transaction.productId) || { amount: 0, name: transaction.productName };
-    currentEntry.amount += transaction.transactionAmountUSD;
+    const key = transaction.productId;
+    const currentEntry = productTotals.get(key) || { amount: 0, name: transaction.productName };
+    
+    // Ensure we're using the correct numeric value for the transaction amount
+    const transactionAmount = typeof transaction.transactionAmountUSD === 'number' 
+      ? transaction.transactionAmountUSD 
+      : parseFloat(String(transaction.transactionAmountUSD).replace(/[^0-9.-]+/g, '')) || 0;
+    
+    currentEntry.amount += transactionAmount;
     
     // Get correct product name from dictionary if it exists (handles 2024 suffix)
     const dictProduct = dictionary.find(p => p.productId === transaction.productId);
@@ -57,19 +69,22 @@ export async function generateReport(
       currentEntry.name = dictProduct.productName;
     }
     
-    productTotals.set(transaction.productId, currentEntry);
+    productTotals.set(key, currentEntry);
   });
+  
+  console.log("Unique products after grouping:", productTotals.size);
   
   // Create report data
   const reportData: ReportItem[] = Array.from(productTotals.entries()).map(([productId, data]) => ({
     name: data.name,
-    total: data.amount,
+    total: parseFloat(data.amount.toFixed(2)), // Ensure we have proper 2 decimal places
     productId
   }));
   
   // Sort by total in descending order
   reportData.sort((a, b) => b.total - a.total);
   
+  console.log("Final report data items:", reportData.length);
   return reportData;
 }
 
@@ -82,6 +97,7 @@ export async function getProductDictionary(): Promise<ProductItem[]> {
       if (storedProducts) {
         try {
           const parsedProducts = JSON.parse(storedProducts);
+          console.log("Loaded products from localStorage:", parsedProducts.length);
           resolve(parsedProducts);
           return;
         } catch (e) {
@@ -97,8 +113,9 @@ export async function getProductDictionary(): Promise<ProductItem[]> {
         { productId: "FS004", productName: "Livery Collection", date: "2023-07-10", isEcho: false },
       ];
       
+      console.log("Using fallback mock product dictionary");
       resolve(mockDictionary);
-    }, 800);
+    }, 300); // Reduced timeout for better UX
   });
 }
 
@@ -111,6 +128,7 @@ export async function getTransactions(): Promise<TransactionItem[]> {
       if (storedTransactions) {
         try {
           const parsedTransactions = JSON.parse(storedTransactions);
+          console.log("Loaded transactions from localStorage:", parsedTransactions.length);
           resolve(parsedTransactions);
           return;
         } catch (e) {
@@ -150,8 +168,9 @@ export async function getTransactions(): Promise<TransactionItem[]> {
         }
       ];
       
+      console.log("Using fallback mock transactions");
       resolve(mockTransactions);
-    }, 800);
+    }, 300); // Reduced timeout for better UX
   });
 }
 

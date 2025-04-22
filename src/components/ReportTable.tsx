@@ -23,6 +23,7 @@ const ReportTable = () => {
       
       try {
         const data = await generateReport(startDate, endDate, echoOnly);
+        console.log("Report data loaded:", data.length, "items");
         setReportData(data);
         setTotalItems(data.length);
         
@@ -30,7 +31,7 @@ const ReportTable = () => {
           toast.info('No data found for the selected filters');
         }
       } catch (err) {
-        console.error(err);
+        console.error("Error loading report data:", err);
         setError('Failed to load report data');
         toast.error('Failed to load report data');
       } finally {
@@ -122,8 +123,8 @@ const ReportTable = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {reportData.map((item) => (
-                    <TableRow key={item.productId || item.name}>
+                  {reportData.map((item, index) => (
+                    <TableRow key={`${item.productId || item.name}-${index}`}>
                       <TableCell className="min-w-[350px] whitespace-normal break-words">
                         <div className="max-w-full">{item.name}</div>
                       </TableCell>
