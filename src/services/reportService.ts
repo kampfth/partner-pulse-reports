@@ -1,4 +1,3 @@
-
 import { ProductItem, TransactionItem } from './fileService';
 
 export interface ReportItem {
@@ -50,21 +49,19 @@ export async function generateReport(
   
   console.log("Filtered transactions:", filteredTransactions.length);
   
-  // Group transactions by productId and sum amounts
   const productTotals = new Map<string, { amount: number; name: string }>();
   
   filteredTransactions.forEach(transaction => {
     const key = transaction.productId;
     const currentEntry = productTotals.get(key) || { amount: 0, name: transaction.productName };
     
-    // Ensure we're using the correct numeric value for the transaction amount
-    const transactionAmount = typeof transaction.transactionAmountUSD === 'number' 
-      ? transaction.transactionAmountUSD 
-      : parseFloat(String(transaction.transactionAmountUSD).replace(/[^0-9.-]+/g, '')) || 0;
+    // USE SPECIFICALLY transactionAmountUSD FOR CALCULATION
+    const transactionAmount = transaction.transactionAmountUSD;
     
-    currentEntry.amount += transactionAmount;
+    currentEntry.amount += typeof transactionAmount === 'number' 
+      ? transactionAmount 
+      : parseFloat(String(transactionAmount).replace(/[^0-9.-]+/g, '')) || 0;
     
-    // Get correct product name from dictionary if it exists (handles 2024 suffix)
     const dictProduct = dictionary.find(p => p.productId === transaction.productId);
     if (dictProduct) {
       currentEntry.name = dictProduct.productName;
@@ -75,14 +72,12 @@ export async function generateReport(
   
   console.log("Unique products after grouping:", productTotals.size);
   
-  // Create report data
   const reportData: ReportItem[] = Array.from(productTotals.entries()).map(([productId, data]) => ({
     name: data.name,
-    total: parseFloat(data.amount.toFixed(2)), // Ensure we have proper 2 decimal places
+    total: parseFloat(data.amount.toFixed(2)),
     productId
   }));
   
-  // Sort by total in descending order
   reportData.sort((a, b) => b.total - a.total);
   
   console.log("Final report data items:", reportData.length);
