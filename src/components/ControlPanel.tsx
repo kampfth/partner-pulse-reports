@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +9,7 @@ import { useAppContext } from '@/context/AppContext';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Trash2, Plus } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const ControlPanel = () => {
   const { isAuthenticated, setIsAuthenticated } = useAppContext();
@@ -93,6 +93,15 @@ const ControlPanel = () => {
     toast.success('Product removed from dictionary');
   };
 
+  const handleDeleteAll = () => {
+    setProducts([]);
+    toast.success('All products have been removed from dictionary');
+  };
+
+  const truncateProductId = (productId: string) => {
+    return productId.slice(0, 3) + '...';
+  };
+
   const handleAddProduct = () => {
     const today = new Date().toISOString().split('T')[0];
     const newProduct = {
@@ -149,6 +158,25 @@ const ControlPanel = () => {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-lg font-medium">Product Dictionary Management</h2>
         <div className="space-x-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive">
+                Delete All
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action will remove all products from the dictionary. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteAll}>Delete All</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <Button 
             onClick={handleAddProduct}
             variant="outline"
@@ -181,7 +209,7 @@ const ControlPanel = () => {
             {products.map((product, index) => (
               <TableRow key={product.productId}>
                 <TableCell className="font-mono">
-                  {product.productId}
+                  {truncateProductId(product.productId)}
                 </TableCell>
                 <TableCell>
                   <Input
