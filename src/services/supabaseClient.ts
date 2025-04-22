@@ -10,31 +10,22 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-  },
-  global: {
-    fetch: (...args) => {
-      // @ts-ignore - args typing issue with fetch
-      return fetch(...args).catch(err => {
-        console.error("Supabase fetch error:", err);
-        throw err;
-      });
-    },
-  },
+  }
 });
 
-// Test connection and log connection status
-(async function testConnection() {
+// Simple helper to test direct table access
+export async function testTableAccess(tableName: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase.from('products').select('count(*)', { count: 'exact', head: true });
-    if (error) {
-      console.error("Supabase connection test error:", error.message);
-    } else {
-      console.log("Supabase connection test successful!");
-    }
+    const { count, error } = await supabase
+      .from(tableName)
+      .select('*', { count: 'exact', head: true });
+    
+    return !error;
   } catch (err) {
-    console.error("Supabase connection test failed:", err);
+    console.error(`Error testing access to table ${tableName}:`, err);
+    return false;
   }
-})();
+}
 
 // Helper function to check if Supabase connection is properly configured
 export const isSupabaseConfigured = () => {

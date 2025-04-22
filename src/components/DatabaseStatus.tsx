@@ -1,18 +1,22 @@
 
 import { useEffect, useState } from 'react';
-import { checkDatabaseSetupAndAutoCreate } from '@/config/database';
+import { checkDatabaseSetup } from '@/config/database';
 import { isSupabaseConfigured, supabase } from '@/services/supabaseClient';
-import { AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle2, RefreshCw, Table } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 
 const DatabaseStatus = () => {
   const [isConfigured, setIsConfigured] = useState<boolean | null>(null);
-  const [tablesReady, setTablesReady] = useState<boolean | null>(null);
+  const [tablesStatus, setTablesStatus] = useState<{
+    products: boolean;
+    transactions: boolean;
+    echoProducts: boolean;
+  } | null>(null);
+  const [allTablesReady, setAllTablesReady] = useState<boolean>(false);
   const [checking, setChecking] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
-  const [autoCreateMsg, setAutoCreateMsg] = useState<string | null>(null);
 
   useEffect(() => {
     checkConfiguration();
@@ -29,36 +33,20 @@ const DatabaseStatus = () => {
 
     if (configStatus) {
       try {
-        // Test basic Supabase connectivity first
-        const { data: connectionTest, error: connectionError } = await supabase.from('products').select('count(*)', { count: 'exact', head: true });
-
-        if (connectionError) {
-          console.error("Connection test error:", connectionError);
-          if (connectionError.code === "PGRST116") {
-            // This error actually means the table exists but user doesn't have permission
-            setConnectionStatus("Conectado ao Supabase, verificando tabelas...");
-            const dbStatus = await checkDatabaseSetupAndAutoCreate();
-            setTablesReady(dbStatus);
-            setAutoCreateMsg(dbStatus 
-              ? "Todas as tabelas necessárias foram encontradas no banco de dados e estão prontas para uso."
-              : "Alguma(s) tabela(s) obrigatória(s) não foi/foram encontrada(s) no banco de dados.");
-          } else {
-            setConnectionStatus(`Erro de conexão: ${connectionError.message}`);
-            setTablesReady(false);
-          }
-        } else {
-          setConnectionStatus("Conectado ao Supabase, verificando tabelas...");
-          // Verify tables existence
-          const dbStatus = await checkDatabaseSetupAndAutoCreate();
-          setTablesReady(dbStatus);
-          setAutoCreateMsg(dbStatus 
-            ? "Todas as tabelas necessárias foram encontradas no banco de dados e estão prontas para uso."
-            : "Alguma(s) tabela(s) obrigatória(s) não foi/foram encontrada(s) no banco de dados.");
-        }
+        // Test tables
+        setConnectionStatus("Conectado ao Supabase, verificando tabelas...");
+        const { isReady, tablesStatus: status } = await checkDatabaseSetup();
+        
+        setTablesStatus(status);
+        setAllTablesReady(isReady);
+        
+        setConnectionStatus(isReady 
+          ? "Conexão com o banco de dados estabelecida com sucesso." 
+          : "Conexão estabelecida, mas nem todas as tabelas estão acessíveis.");
       } catch (error) {
-        console.error("Unexpected error during connection check:", error);
+        console.error("Unexpected error during database check:", error);
         setConnectionStatus(`Erro inesperado: ${error instanceof Error ? error.message : 'Desconhecido'}`);
-        setTablesReady(false);
+        setAllTablesReady(false);
       }
     }
     
@@ -70,14 +58,26 @@ const DatabaseStatus = () => {
     checkConfiguration();
   };
 
-  // Render SQL statements separately from state
+  // Render SQL instructions for missing tables
   const renderSQLInstructions = () => {
-    if (!tablesReady && isConfigured) {
-      return (
-        <>
-          <span className="block mt-2">Copie e cole estes comandos no SQL Editor do seu painel Supabase para criar as tabelas:</span>
-          <pre className="mt-2 p-2 bg-slate-900 text-white text-xs rounded overflow-auto max-h-52">
-{`-- Create Products Table
+    if (tablesStatus && !allTablesReady) {
+      const missingTables: string[] = [];
+      if (!tablesStatus.products) missingTables.push("products");
+      if (!tablesStatus.transactions) missingTables.push("transactions");
+      if (!tablesStatus.echoProducts) missingTables.push("echo_products");
+      
+      if (missingTables.length > 0) {
+        return (
+          <>
+            <div className="flex items-center mt-3 mb-2">
+              <Table className="h-4 w-4 mr-2" />
+              <span className="font-semibold">Tabelas faltantes: {missingTables.join(", ")}</span>
+            </div>
+            <span className="block text-sm">
+              Verifique suas permissões RLS no Supabase ou execute os seguintes comandos SQL para criar as tabelas faltantes:
+            </span>
+            <pre className="mt-2 p-2 bg-slate-900 text-white text-xs rounded overflow-auto max-h-52">
+{`-- Create Products Table (if needed)
 CREATE TABLE IF NOT EXISTS products (
   id SERIAL PRIMARY KEY,
   "productId" TEXT UNIQUE NOT NULL,
@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS products (
   "isEcho" BOOLEAN DEFAULT false
 );
 
--- Create Transactions Table
+-- Create Transactions Table (if needed)
 CREATE TABLE IF NOT EXISTS transactions (
   id SERIAL PRIMARY KEY,
   "productId" TEXT NOT NULL,
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   CONSTRAINT unique_transaction UNIQUE ("productId", "transactionDate")
 );
 
--- Create Echo Products Table
+-- Create Echo Products Table (if needed)
 CREATE TABLE IF NOT EXISTS echo_products (
   id SERIAL PRIMARY KEY,
   "productId" TEXT UNIQUE NOT NULL,
@@ -113,42 +113,49 @@ ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE echo_products ENABLE ROW LEVEL SECURITY;
 
--- Create policies that allow all operations for authenticated users
+-- Create policies for table access
 CREATE POLICY "Allow all operations for authenticated users on products" 
-  ON products FOR ALL TO authenticated 
-  USING (true) 
-  WITH CHECK (true);
+  ON products FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow anon read on products" 
+  ON products FOR SELECT TO anon USING (true);
 
 CREATE POLICY "Allow all operations for authenticated users on transactions" 
-  ON transactions FOR ALL TO authenticated 
-  USING (true) 
-  WITH CHECK (true);
+  ON transactions FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow anon read on transactions" 
+  ON transactions FOR SELECT TO anon USING (true);
 
 CREATE POLICY "Allow all operations for authenticated users on echo_products" 
-  ON echo_products FOR ALL TO authenticated 
-  USING (true) 
-  WITH CHECK (true);
-
--- Allow anon access for read operations
-CREATE POLICY "Allow anon read on products" 
-  ON products FOR SELECT TO anon 
-  USING (true);
-
-CREATE POLICY "Allow anon read on transactions" 
-  ON transactions FOR SELECT TO anon 
-  USING (true);
-
+  ON echo_products FOR ALL TO authenticated USING (true) WITH CHECK (true);
 CREATE POLICY "Allow anon read on echo_products" 
-  ON echo_products FOR SELECT TO anon 
-  USING (true);`}
-          </pre>
-          <p className="mt-2 text-sm">
-            Após criar as tabelas pelo painel, clique em <b>Verificar novamente</b>.
-          </p>
-        </>
-      );
+  ON echo_products FOR SELECT TO anon USING (true);`}
+            </pre>
+          </>
+        );
+      }
     }
     return null;
+  };
+
+  // Render table status summary
+  const renderTableStatus = () => {
+    if (!tablesStatus) return null;
+    
+    return (
+      <div className="grid grid-cols-1 gap-2 mt-3">
+        <div className="flex items-center">
+          <div className={`w-3 h-3 rounded-full mr-2 ${tablesStatus.products ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <span className="text-sm">Tabela products: {tablesStatus.products ? 'Acessível' : 'Inacessível'}</span>
+        </div>
+        <div className="flex items-center">
+          <div className={`w-3 h-3 rounded-full mr-2 ${tablesStatus.transactions ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <span className="text-sm">Tabela transactions: {tablesStatus.transactions ? 'Acessível' : 'Inacessível'}</span>
+        </div>
+        <div className="flex items-center">
+          <div className={`w-3 h-3 rounded-full mr-2 ${tablesStatus.echoProducts ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <span className="text-sm">Tabela echo_products: {tablesStatus.echoProducts ? 'Acessível' : 'Inacessível'}</span>
+        </div>
+      </div>
+    );
   };
 
   if (isConfigured === null || checking) {
@@ -180,15 +187,15 @@ CREATE POLICY "Allow anon read on echo_products"
     );
   }
 
-  // Exibe alerta sucesso/erro pós checagem de tabelas
+  // Exibe alerta de sucesso/erro após checagem de tabelas
   return (
-    <Alert variant={tablesReady ? "default" : "destructive"} className={`my-4 ${tablesReady ? "bg-green-500/10 border-green-500 text-green-700" : ""}`}>
-      {tablesReady
+    <Alert variant={allTablesReady ? "default" : "destructive"} className={`my-4 ${allTablesReady ? "bg-green-500/10 border-green-500 text-green-700" : ""}`}>
+      {allTablesReady
         ? (<CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />)
         : (<AlertCircle className="h-4 w-4 mr-2" />)
       }
       <AlertTitle className="flex items-center justify-between">
-        <span>{tablesReady ? "Banco pronto para uso" : "Tabelas não encontradas"}</span>
+        <span>{allTablesReady ? "Banco pronto para uso" : "Problema de acesso às tabelas"}</span>
         <Button 
           size="sm" 
           variant="outline" 
@@ -202,7 +209,7 @@ CREATE POLICY "Allow anon read on echo_products"
       </AlertTitle>
       <AlertDescription>
         {connectionStatus && <p className="text-sm mb-2">{connectionStatus}</p>}
-        {autoCreateMsg}
+        {renderTableStatus()}
         {renderSQLInstructions()}
       </AlertDescription>
     </Alert>

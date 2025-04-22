@@ -1,5 +1,5 @@
 
-import { supabase } from '@/services/supabaseClient';
+import { supabase, testTableAccess } from '@/services/supabaseClient';
 
 export interface DatabaseConfig {
   tables: {
@@ -18,83 +18,45 @@ export const dbConfig: DatabaseConfig = {
   }
 };
 
-// Improved function to check if the tables exist
-export async function checkDatabaseSetupAndAutoCreate(): Promise<boolean> {
+// Simplified direct access check for tables
+export async function checkDatabaseSetup(): Promise<{
+  isReady: boolean;
+  tablesStatus: {
+    products: boolean;
+    transactions: boolean;
+    echoProducts: boolean;
+  }
+}> {
   try {
-    // Use introspection/metadata methods to check tables existence
-    const { data: tables, error } = await supabase
-      .from('___tables')
-      .select('table_name')
-      .eq('schema', 'public');
+    // Check each table directly
+    const productsExists = await testTableAccess(dbConfig.tables.products);
+    const transactionsExists = await testTableAccess(dbConfig.tables.transactions);
+    const echoProductsExists = await testTableAccess(dbConfig.tables.echoProducts);
     
-    if (error) {
-      console.error("Error checking tables:", error);
-      
-      // If metadata query fails, fallback to direct table queries
-      return await fallbackTableCheck();
-    }
+    console.log(`Tables direct access check: products=${productsExists}, transactions=${transactionsExists}, echoProducts=${echoProductsExists}`);
     
-    // Convert table names to a set for easy lookup
-    const tableSet = new Set(tables?.map(t => t.table_name) || []);
-    
-    const productsExists = tableSet.has(dbConfig.tables.products);
-    const transactionsExists = tableSet.has(dbConfig.tables.transactions);
-    const echoProductsExists = tableSet.has(dbConfig.tables.echoProducts);
-    
-    // Log table existence status
-    console.log(`Tables existence check: products=${productsExists}, transactions=${transactionsExists}, echoProducts=${echoProductsExists}`);
-    
-    return productsExists && transactionsExists && echoProductsExists;
+    return {
+      isReady: productsExists && transactionsExists && echoProductsExists,
+      tablesStatus: {
+        products: productsExists,
+        transactions: transactionsExists,
+        echoProducts: echoProductsExists
+      }
+    };
   } catch (error) {
-    console.error("Unexpected error during table check:", error);
-    return await fallbackTableCheck();
+    console.error("Unexpected error during database check:", error);
+    return {
+      isReady: false,
+      tablesStatus: {
+        products: false,
+        transactions: false,
+        echoProducts: false
+      }
+    };
   }
 }
 
-// Fallback method using direct table queries
-async function fallbackTableCheck(): Promise<boolean> {
-  console.log("Using fallback table check method...");
-  
-  try {
-    // Check products table
-    const { data: productsData, error: productsError } = await supabase
-      .from(dbConfig.tables.products)
-      .select('count(*)', { count: 'exact', head: true });
-      
-    if (productsError) {
-      console.warn("Products table check failed:", productsError.message);
-      return false;
-    }
-
-    // Check transactions table
-    const { data: transactionsData, error: transactionsError } = await supabase
-      .from(dbConfig.tables.transactions)
-      .select('count(*)', { count: 'exact', head: true });
-      
-    if (transactionsError) {
-      console.warn("Transactions table check failed:", transactionsError.message);
-      return false;
-    }
-
-    // Check echo_products table
-    const { data: echoProductsData, error: echoProductsError } = await supabase
-      .from(dbConfig.tables.echoProducts)
-      .select('count(*)', { count: 'exact', head: true });
-      
-    if (echoProductsError) {
-      console.warn("Echo products table check failed:", echoProductsError.message);
-      return false;
-    }
-
-    console.log("All tables found using fallback method");
-    return true;
-  } catch (error) {
-    console.error("Fallback table check failed:", error);
-    return false;
-  }
-}
-
-// SQL statements for creating required tables (to be executed in Supabase SQL Editor)
+// SQL statements for creating required tables (for reference)
 export const createTableStatements = {
   products: `
 CREATE TABLE IF NOT EXISTS products (
