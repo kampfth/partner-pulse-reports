@@ -8,8 +8,14 @@ import { getProductDictionary, saveProductDictionary } from '@/services/reportSe
 import { useAppContext } from '@/context/AppContext';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, Download, Upload } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const ControlPanel = () => {
   const { isAuthenticated, setIsAuthenticated } = useAppContext();
@@ -114,6 +120,49 @@ const ControlPanel = () => {
     setProducts([...products, newProduct]);
   };
 
+  const handleDownloadDictionary = (type: 'all' | 'echo') => {
+    const dictionaryToDownload = type === 'echo' 
+      ? products.filter(p => p.isEcho)
+      : products;
+    
+    const fileName = type === 'echo' ? 'DB_EchoProducts.json' : 'DB_4Simmers.json';
+    const jsonStr = JSON.stringify(dictionaryToDownload, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast.success(`Downloaded ${fileName}`);
+  };
+
+  const handleUploadDictionary = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const uploadedProducts = JSON.parse(content);
+        
+        if (Array.isArray(uploadedProducts)) {
+          setProducts(uploadedProducts);
+          toast.success('Dictionary uploaded successfully');
+        } else {
+          toast.error('Invalid dictionary format');
+        }
+      } catch (error) {
+        toast.error('Failed to parse dictionary file');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="glass-card rounded-lg p-6 max-w-md mx-auto">
@@ -177,6 +226,39 @@ const ControlPanel = () => {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="mr-2 h-4 w-4" />
+                Download Dictionary
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleDownloadDictionary('all')}>
+                Download DB_4Simmers
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleDownloadDictionary('echo')}>
+                Download DB_EchoProducts
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button 
+            variant="outline" 
+            onClick={() => document.getElementById('dictionaryUpload')?.click()}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Upload Dictionary
+          </Button>
+          <input
+            id="dictionaryUpload"
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleUploadDictionary}
+          />
+          
           <Button 
             onClick={handleAddProduct}
             variant="outline"
