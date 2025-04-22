@@ -20,21 +20,41 @@ const FileUpload = () => {
     setUploading(true);
 
     try {
-      const response = await uploadFile(file);
+      // Leitura do arquivo para garantir que ele é válido
+      const fileReader = new FileReader();
+      fileReader.readAsText(file);
       
-      if (response.success) {
-        setFileStatus('uploaded');
-        if (response.filePath) {
-          setUploadedFilePath(response.filePath);
+      fileReader.onload = async () => {
+        // Verificar se o arquivo tem conteúdo
+        if (typeof fileReader.result !== 'string' || !fileReader.result.trim()) {
+          toast.error('O arquivo enviado está vazio');
+          setUploading(false);
+          return;
         }
-        toast.success('File uploaded successfully');
-      } else {
-        toast.error(response.message || 'Error uploading file');
-      }
+        
+        // Se chegamos aqui, o arquivo é válido
+        const response = await uploadFile(file);
+        
+        if (response.success) {
+          setFileStatus('uploaded');
+          if (response.filePath) {
+            setUploadedFilePath(response.filePath);
+            console.log("File uploaded successfully:", response.filePath);
+          }
+          toast.success('File uploaded successfully');
+        } else {
+          toast.error(response.message || 'Error uploading file');
+        }
+        setUploading(false);
+      };
+      
+      fileReader.onerror = () => {
+        toast.error('Error reading file');
+        setUploading(false);
+      };
     } catch (error) {
       toast.error('Error uploading file');
       console.error(error);
-    } finally {
       setUploading(false);
     }
   };

@@ -12,7 +12,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
   },
   global: {
-    fetch: (...args) => fetch(...args),
     headers: { 
       'X-Client-Info': 'partnerpulse',
     },

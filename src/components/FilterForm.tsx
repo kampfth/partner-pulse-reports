@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -26,6 +26,24 @@ const FilterForm = () => {
 
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Set default dates on component mount
+  useEffect(() => {
+    if (!startDate) {
+      // Get first day of current month
+      const today = new Date();
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      const formattedFirstDay = firstDay.toISOString().split('T')[0];
+      setStartDate(formattedFirstDay);
+    }
+
+    if (!endDate) {
+      // Get today's date
+      const today = new Date();
+      const formattedToday = today.toISOString().split('T')[0];
+      setEndDate(formattedToday);
+    }
+  }, [startDate, endDate, setStartDate, setEndDate]);
+
   const handleProcess = async () => {
     if (fileStatus !== 'uploaded') {
       toast.error('Please upload a file first');
@@ -48,9 +66,7 @@ const FilterForm = () => {
         transactionsCount: processedData.transactions.length 
       });
       
-      // Check for anonymous permissions since we're not using auth in this demo
-      const { data: rls } = await supabase.rpc('check_rls_permissions');
-      console.log("RLS permissions check:", rls);
+      console.log("Transactions data sample:", processedData.transactions[0]);
       
       // Update product dictionary with new data
       const result = await updateProductFromCSV(processedData);
@@ -60,16 +76,15 @@ const FilterForm = () => {
         toast.success('File processed successfully');
       } else {
         // Even if there's an error saving to database, we'll still consider the file processed
-        // for demo purposes, so Reports tab becomes available
+        // so Reports tab becomes available
         setFileStatus('processed');
-        toast.warning('File processed, but there may be issues saving to database');
-        console.warn('Issues saving to database, but file was processed');
+        toast.warning('File processed but there were issues saving to the database. Reports may not display correctly.');
       }
     } catch (error) {
       console.error("Processing error:", error);
-      // Even if there's an error, we'll still mark as processed for demo purposes
+      toast.error('Error processing file');
+      // Even if there's an error, we'll still mark as processed so user can try viewing reports
       setFileStatus('processed');
-      toast.warning('There were some issues processing the file, but you can view the report');
     } finally {
       setIsProcessing(false);
     }

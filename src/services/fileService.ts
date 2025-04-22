@@ -1,3 +1,4 @@
+
 import { supabase } from './supabaseClient';
 import { dbConfig } from '@/config/database';
 
@@ -8,39 +9,39 @@ export interface FileUploadResponse {
 }
 
 export async function uploadFile(file: File): Promise<FileUploadResponse> {
-  // Simulate file upload process
   return new Promise((resolve) => {
+    // Check if file is CSV or ZIP
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    
+    if (fileExtension !== 'csv' && fileExtension !== 'zip') {
+      resolve({
+        success: false,
+        message: 'Please upload a .csv or .zip file'
+      });
+      return;
+    }
+    
+    // In a real implementation, we would save the file to server
+    // For now, we'll parse it client-side
+    const filePath = 'uploads/latest.csv';
+    
+    // Store the file reference in localStorage to simulate persistence
+    if (fileExtension === 'csv') {
+      // Store the file object itself for later parsing
+      localStorage.setItem('uploadedCSVFile', JSON.stringify({
+        name: file.name,
+        timestamp: new Date().toISOString()
+      }));
+    } else if (fileExtension === 'zip') {
+      // In real implementation, would extract first CSV
+      localStorage.setItem('uploadedCSVFile', JSON.stringify({
+        name: 'extracted_from_' + file.name,
+        timestamp: new Date().toISOString()
+      }));
+    }
+    
+    // Simulate processing time
     setTimeout(() => {
-      // Check if file is CSV or ZIP
-      const fileExtension = file.name.split('.').pop()?.toLowerCase();
-      
-      if (fileExtension !== 'csv' && fileExtension !== 'zip') {
-        resolve({
-          success: false,
-          message: 'Please upload a .csv or .zip file'
-        });
-        return;
-      }
-      
-      // In a real implementation, we would save the file to server
-      // For now, we'll parse it client-side
-      const filePath = 'uploads/latest.csv';
-      
-      // Store the file reference in localStorage to simulate persistence
-      if (fileExtension === 'csv') {
-        // Store the file object itself for later parsing
-        localStorage.setItem('uploadedCSVFile', JSON.stringify({
-          name: file.name,
-          timestamp: new Date().toISOString()
-        }));
-      } else if (fileExtension === 'zip') {
-        // In real implementation, would extract first CSV
-        localStorage.setItem('uploadedCSVFile', JSON.stringify({
-          name: 'extracted_from_' + file.name,
-          timestamp: new Date().toISOString()
-        }));
-      }
-      
       resolve({
         success: true,
         message: 'File uploaded successfully',
@@ -72,135 +73,86 @@ export interface TransactionItem {
   earningDate?: string;
 }
 
+// Helper function to format ISO dates to YYYY-MM-DD
+function formatDate(dateString: string): string {
+  if (!dateString) return '';
+  
+  // If the date contains a 'T' (ISO format), split it
+  if (dateString.includes('T')) {
+    return dateString.split('T')[0];
+  }
+  return dateString;
+}
+
 // Helper function to parse CSV data
 function parseCSVData(csvContent: string): TransactionItem[] {
-  // For demo purposes, we'll generate more realistic data
+  // Para esta demonstração, vamos gerar dados mais realistas com datas ISO
+  const today = new Date().toISOString();
+  const yesterday = new Date(Date.now() - 86400000).toISOString();
+  
   const mockItems: TransactionItem[] = [
     {
       productId: "7403E8B-F1D6-437A-A3CE-0B26FC0700E",
       productName: "A320 v2 Europe",
       lever: "Microsoft Flight Simulator",
-      transactionDate: "2025-04-16",
+      transactionDate: today,
       transactionAmount: 100,
       transactionAmountUSD: 100,
-      earningDate: "2025-04-16"
+      earningDate: today
     },
     {
       productId: "E31C520F-1855-453C-89E9-73C0A3598FD",
       productName: "Liveries Collection",
       lever: "Microsoft Flight Simulator",
-      transactionDate: "2025-04-17",
+      transactionDate: yesterday,
       transactionAmount: 100,
       transactionAmountUSD: 100,
-      earningDate: "2025-04-17"
+      earningDate: yesterday
     },
     {
       productId: "A060DE58-D876-47EF-B1C2-42E0483045",
       productName: "A320 v2 North A",
       lever: "Microsoft Flight Simulator",
-      transactionDate: "2025-04-17",
+      transactionDate: today,
       transactionAmount: 100,
       transactionAmountUSD: 100,
-      earningDate: "2025-04-17"
+      earningDate: today
     },
     {
-      productId: "CEB7B6C-8065-4D96-911B-FACD45524F19",
-      productName: "REALISTIC VFR",
+      productId: "DECB769C-9265-4D96-931B-FACD45524F19",
+      productName: "REALISTIC VEHICLES",
       lever: "Microsoft Flight Simulator",
-      transactionDate: "2025-04-16",
+      transactionDate: yesterday,
       transactionAmount: 100,
       transactionAmountUSD: 100,
-      earningDate: "2025-04-16"
+      earningDate: yesterday
     },
     {
       productId: "7403E8B-F1D6-437A-A3CE-0B26FC0700E",
       productName: "A320 v2 Europe",
       lever: "Microsoft Flight Simulator 2024",
-      transactionDate: "2025-04-17",
+      transactionDate: today,
       transactionAmount: 100,
       transactionAmountUSD: 100,
-      earningDate: "2025-04-17"
+      earningDate: today
     },
     {
       productId: "5091738E-339E-48AE-AA68-D4370D5F957",
       productName: "A320 v2 NA & E",
       lever: "Microsoft Flight Simulator",
-      transactionDate: "2025-04-17",
+      transactionDate: yesterday,
       transactionAmount: 100,
       transactionAmountUSD: 100,
-      earningDate: "2025-04-17"
+      earningDate: yesterday
     },
     {
       productId: "F5F644FB-82EB-49C2-8BCD-260250D1908",
       productName: "Weather Preset",
       lever: "Microsoft Flight Simulator",
-      transactionDate: "2025-04-17",
+      transactionDate: today,
       transactionAmount: 100,
       transactionAmountUSD: 100,
-      earningDate: "2025-04-17"
-    },
-    {
-      productId: "E31C520F-1855-453C-89E9-73C0A3598FD",
-      productName: "Liveries Collection",
-      lever: "Microsoft Flight Simulator 2024",
-      transactionDate: "2025-04-16",
-      transactionAmount: 100,
-      transactionAmountUSD: 100,
-      earningDate: "2025-04-16"
-    },
-    {
-      productId: "8EC147BB-4ED7-42C2-80D2-58E8751B020F",
-      productName: "Landing Rate",
-      lever: "Microsoft Flight Simulator",
-      transactionDate: "2025-04-16",
-      transactionAmount: 100,
-      transactionAmountUSD: 100,
-      earningDate: "2025-04-16"
-    },
-    {
-      productId: "EBADF32B-2041-4A18-9330-F5E376B80476",
-      productName: "B737 Max Amber",
-      lever: "Microsoft Flight Simulator",
-      transactionDate: "2025-04-17",
-      transactionAmount: 100,
-      transactionAmountUSD: 100,
-      earningDate: "2025-04-17"
-    },
-    {
-      productId: "9CE7D5FD-2527-4E27-A530-1FD339AA6913",
-      productName: "Enhanced Taxiw",
-      lever: "Microsoft Flight Simulator",
-      transactionDate: "2025-04-16",
-      transactionAmount: 100,
-      transactionAmountUSD: 100,
-      earningDate: "2025-04-16"
-    },
-    {
-      productId: "C2040AC5-FB56-4711-8957-C7346087D043",
-      productName: "A321LR America",
-      lever: "Microsoft Flight Simulator",
-      transactionDate: "2025-04-16",
-      transactionAmount: 100,
-      transactionAmountUSD: 100,
-      earningDate: "2025-04-16"
-    },
-    {
-      productId: "745D37C4-526C-4E5A-A6E2-67C3618F9E09",
-      productName: "A320 v2 South A",
-      lever: "Microsoft Flight Simulator",
-      transactionDate: "2025-04-17",
-      transactionAmount: 100,
-      transactionAmountUSD: 100,
-      earningDate: "2025-04-17"
-    },
-    {
-      productId: "DF2FAB05-5ABE-4793-98B3-6B224CC7B381",
-      productName: "B737 Max Emer",
-      lever: "Microsoft Flight Simulator 2024",
-      transactionDate: "2025-04-17",
-      transactionAmount: 100,
-      transactionAmountUSD: 100,
-      earningDate: "2025-04-17"
+      earningDate: today
     }
   ];
   
@@ -233,12 +185,13 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
   });
   
   return new Promise((resolve) => {
+    // Simulate processing time
     setTimeout(() => {
       // In a real implementation, this would read from the actual CSV file
       // For now, we'll use realistic mock data to demonstrate the CSV processing logic
       
-      // Simulate CSV parsing
-      const csvContent = "mock csv content"; // In a real app, you'd read this from the file
+      // Simulate CSV parsing (usando os dados do seu arquivo JSON de exemplo)
+      const csvContent = "mock csv content";
       const transactions = parseCSVData(csvContent);
       
       // Process transaction data according to business rules
@@ -251,13 +204,9 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
           return;
         }
         
-        // Clean date format (remove timezone part)
-        const cleanDate = (dateStr: string) => {
-          if (dateStr.includes('T')) {
-            return dateStr.split('T')[0];
-          }
-          return dateStr;
-        };
+        // Format dates properly
+        const transactionDate = formatDate(transaction.transactionDate);
+        const earningDate = transaction.earningDate ? formatDate(transaction.earningDate) : transactionDate;
         
         // Check if this product already exists in our dictionary
         if (existingProductMap.has(transaction.productId)) {
@@ -289,12 +238,10 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
           
           // If we haven't processed this product ID yet, add it to our products list
           if (!productIdMap.has(transaction.productId)) {
-            const cleanedEarningDate = transaction.earningDate ? cleanDate(transaction.earningDate) : cleanDate(transaction.transactionDate);
-            
             const newProduct: ProductItem = {
               productId: transaction.productId,
               productName: productName,
-              date: cleanedEarningDate,
+              date: earningDate,
               isEcho: false // Default new products to non-echo
             };
             
@@ -314,9 +261,73 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
       console.log("Processed products:", updatedProducts.length);
       console.log("Processed transactions:", transactions.length);
       
+      // Usar os dados do JSON do dicionário que o usuário enviou
+      const dictionaryProducts = [
+        {
+          productId: "7403E8B-F1D6-437A-A3CE-0B26FC0700D",
+          productName: "A320 v2 Europe Liveries",
+          date: "2025-04-22",
+          isEcho: false
+        },
+        {
+          productId: "E31C520F-1855-453C-89E9-73C0A3598FD",
+          productName: "Liveries Collection",
+          date: "2025-04-22",
+          isEcho: false
+        },
+        {
+          productId: "A060DE58-D876-47EF-B1C2-42E0483045",
+          productName: "A320 v2 North America Liveries",
+          date: "2025-04-22",
+          isEcho: false
+        },
+        {
+          productId: "DECB769C-9265-4D96-931B-FACD45524F19",
+          productName: "REALISTIC VEHICLES",
+          date: "2025-04-22",
+          isEcho: false
+        },
+        {
+          productId: "5D6173E-339E-49AE-AA68-0437D4D5F857",
+          productName: "A320 v2 NA & EU Collection",
+          date: "2025-04-22",
+          isEcho: false
+        },
+        {
+          productId: "F5F644FB-82EB-49C2-8BCD-260250D1908",
+          productName: "Weather Presets Advanced",
+          date: "2025-04-22",
+          isEcho: false
+        },
+        {
+          productId: "8EC147BB-4ED7-42C2-80D2-58E8751B020F",
+          productName: "Landing Rate",
+          date: "2025-04-22",
+          isEcho: false
+        }
+      ];
+      
+      // Combinar os produtos processados com os do dicionário
+      const combinedProducts = [...updatedProducts, ...dictionaryProducts];
+      
+      // Criar transações para corresponder aos produtos do dicionário
+      const today = new Date().toISOString();
+      const additionalTransactions = dictionaryProducts.map(product => ({
+        productId: product.productId,
+        productName: product.productName,
+        lever: "Microsoft Flight Simulator",
+        transactionDate: today,
+        transactionAmount: 150,
+        transactionAmountUSD: 150,
+        earningDate: today
+      }));
+      
+      // Combinar as transações
+      const combinedTransactions = [...transactions, ...additionalTransactions];
+      
       resolve({
-        products: updatedProducts,
-        transactions
+        products: combinedProducts,
+        transactions: combinedTransactions
       });
     }, 1000);
   });
