@@ -2,6 +2,7 @@
 export interface ReportItem {
   name: string;
   total: number;
+  productId?: string;
 }
 
 export async function generateReport(
@@ -9,23 +10,28 @@ export async function generateReport(
   endDate?: string,
   echoOnly?: boolean
 ): Promise<ReportItem[]> {
+  // First get the product dictionary
+  const dictionary = await getProductDictionary();
+  
   // Simulate API call to get report data
   return new Promise((resolve) => {
     setTimeout(() => {
-      const mockData: ReportItem[] = [
-        { name: "Microsoft Flight Simulator 2024", total: 15249.99 },
-        { name: "Microsoft Office 365 Enterprise", total: 8732.50 },
-        { name: "Azure Cloud Services Premium", total: 6543.75 },
-        { name: "Windows 11 Pro", total: 4321.00 },
-        { name: "Microsoft Dynamics 365", total: 3652.25 },
-        { name: "Visual Studio Enterprise", total: 2987.99 },
-        { name: "Microsoft Teams Premium", total: 1876.50 },
-        { name: "Xbox Game Pass Ultimate", total: 1543.25 },
-        { name: "Microsoft Power BI Pro", total: 987.75 },
-        { name: "Microsoft Surface Pro 9", total: 876.50 },
-      ];
+      // Generate report data based on the product dictionary
+      const mockData: ReportItem[] = dictionary.map(product => ({
+        name: product.productName,
+        total: Math.random() * 10000 + 500, // Random sales amount between 500 and 10500
+        productId: product.productId
+      }));
       
-      resolve(mockData);
+      // Filter by echo if needed
+      const filteredData = echoOnly 
+        ? mockData.filter(item => {
+            const dictProduct = dictionary.find(p => p.productId === item.productId);
+            return dictProduct?.isEcho;
+          })
+        : mockData;
+      
+      resolve(filteredData);
     }, 1000);
   });
 }

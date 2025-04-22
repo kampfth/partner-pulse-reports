@@ -68,7 +68,7 @@ const ReportTable = () => {
           </TableHeader>
           <TableBody>
             {reportData.map((item) => (
-              <TableRow key={item.name}>
+              <TableRow key={item.productId || item.name}>
                 <TableCell>{item.name}</TableCell>
                 <TableCell className="text-right font-medium">{formatCurrency(item.total)}</TableCell>
               </TableRow>
