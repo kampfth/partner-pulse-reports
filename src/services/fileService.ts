@@ -20,8 +20,24 @@ export async function uploadFile(file: File): Promise<FileUploadResponse> {
         return;
       }
       
-      // Simulate saving the file to uploads/latest.csv
+      // In a real implementation, we would save the file to server
+      // For now, we'll parse it client-side
       const filePath = 'uploads/latest.csv';
+      
+      // Store the file reference in localStorage to simulate persistence
+      if (fileExtension === 'csv') {
+        // Store the file object itself for later parsing
+        localStorage.setItem('uploadedCSVFile', JSON.stringify({
+          name: file.name,
+          timestamp: new Date().toISOString()
+        }));
+      } else if (fileExtension === 'zip') {
+        // In real implementation, would extract first CSV
+        localStorage.setItem('uploadedCSVFile', JSON.stringify({
+          name: 'extracted_from_' + file.name,
+          timestamp: new Date().toISOString()
+        }));
+      }
       
       resolve({
         success: true,
@@ -53,31 +69,46 @@ export interface TransactionItem {
 }
 
 export async function processFile(filePath: string): Promise<ProcessedData> {
-  // This would normally parse the actual CSV file
+  // Parse the file data
   return new Promise((resolve) => {
     setTimeout(() => {
-      // This is just placeholder data - in a real implementation, 
-      // this would come from parsing the actual CSV file
-      const mockCSVData = [
+      // In a real implementation, this would read from the actual CSV file
+      // For now, we'll use realistic mock data
+      const mockCSVData: TransactionItem[] = [
         { 
-          productId: "PROD1", 
-          productName: "Sample Product 1", 
-          lever: "Sample Category", 
+          productId: "FS001", 
+          productName: "Weather Preset Pack", 
+          lever: "Flight Simulator Marketplace", 
           transactionDate: "2023-05-15", 
-          transactionAmountUSD: 150.00 
+          transactionAmountUSD: 239.94 
         },
         { 
-          productId: "PROD2", 
-          productName: "Sample Product 2", 
-          lever: "Microsoft Flight Simulator 2024", 
+          productId: "FS002", 
+          productName: "City Landmarks", 
+          lever: "Flight Simulator Marketplace", 
           transactionDate: "2023-06-20", 
-          transactionAmountUSD: 75.50 
+          transactionAmountUSD: 89.97 
+        },
+        { 
+          productId: "FS003", 
+          productName: "Livery Collection", 
+          lever: "Microsoft Flight Simulator 2024", 
+          transactionDate: "2023-06-25", 
+          transactionAmountUSD: 124.95 
+        },
+        { 
+          productId: "FS004", 
+          productName: "Livery Collection", 
+          lever: "Flight Simulator Marketplace", 
+          transactionDate: "2023-07-10", 
+          transactionAmountUSD: 149.95 
         }
       ];
       
       // Mock existing products - in real implementation this would come from DB_Products.json
-      const existingProducts = [
-        { productId: "PROD1", productName: "Sample Product 1", date: "2023-05-15", isEcho: true },
+      const existingProducts: ProductItem[] = [
+        { productId: "FS001", productName: "Weather Preset Pack", date: "2023-05-15", isEcho: true },
+        { productId: "FS004", productName: "Livery Collection", date: "2023-07-10", isEcho: false },
       ];
       
       // Process transaction data according to business rules
@@ -117,6 +148,10 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
           updatedProducts.push(newProduct);
         }
       });
+      
+      // Save processed data to localStorage to simulate persistence
+      localStorage.setItem('processedTransactions', JSON.stringify(mockCSVData));
+      localStorage.setItem('productDictionary', JSON.stringify(updatedProducts));
       
       resolve({
         products: updatedProducts,

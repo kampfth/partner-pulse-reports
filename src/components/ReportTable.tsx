@@ -4,6 +4,7 @@ import { generateReport, ReportItem } from '@/services/reportService';
 import { useAppContext } from '@/context/AppContext';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatCurrency } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const ReportTable = () => {
   const { startDate, endDate, echoOnly } = useAppContext();
@@ -19,9 +20,14 @@ const ReportTable = () => {
       try {
         const data = await generateReport(startDate, endDate, echoOnly);
         setReportData(data);
+        
+        if (data.length === 0) {
+          toast.info('No data found for the selected filters');
+        }
       } catch (err) {
         console.error(err);
         setError('Failed to load report data');
+        toast.error('Failed to load report data');
       } finally {
         setLoading(false);
       }
@@ -58,31 +64,37 @@ const ReportTable = () => {
         </div>
       </div>
       
-      <div className="flex-1 overflow-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Product Name</TableHead>
-              <TableHead className="text-right">Total Sales</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {reportData.map((item) => (
-              <TableRow key={item.productId || item.name}>
-                <TableCell>{item.name}</TableCell>
-                <TableCell className="text-right font-medium">{formatCurrency(item.total)}</TableCell>
-              </TableRow>
-            ))}
-            {reportData.length === 0 && (
+      {reportData.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-muted-foreground mb-2">No data found for the selected filters</p>
+            <ul className="text-sm text-muted-foreground list-disc list-inside text-left">
+              <li>Try adjusting the date range</li>
+              <li>If "Echo Products Only" is selected, you may not have any Echo products</li>
+              <li>Make sure a file has been processed successfully</li>
+            </ul>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 overflow-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={2} className="text-center py-8 text-muted-foreground">
-                  No data found for the selected filters
-                </TableCell>
+                <TableHead>Product Name</TableHead>
+                <TableHead className="text-right">Total Sales</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {reportData.map((item) => (
+                <TableRow key={item.productId || item.name}>
+                  <TableCell>{item.name}</TableCell>
+                  <TableCell className="text-right font-medium">{formatCurrency(item.total)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </div>
   );
 };
