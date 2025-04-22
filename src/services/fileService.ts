@@ -44,7 +44,7 @@ export async function uploadFile(file: File): Promise<FileUploadResponse> {
         message: 'File uploaded successfully',
         filePath
       });
-    }, 1500);
+    }, 1000);
   });
 }
 
@@ -69,12 +69,9 @@ export interface TransactionItem {
   earningDate?: string;
 }
 
-// Helper function to parse CSV data - would be replaced by actual CSV parser in production
+// Helper function to parse CSV data
 function parseCSVData(csvContent: string): TransactionItem[] {
-  // For demo purposes, we'll simulate parsing CSV
-  // In a real implementation, use a proper CSV parser library
-  
-  // Generate realistic data based on the provided CSV image
+  // For demo purposes, we'll generate more realistic data
   const mockItems: TransactionItem[] = [
     {
       productId: "7403E8B-F1D6-437A-A3CE-0B26FC0700E",
@@ -204,8 +201,8 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
       const transactions = parseCSVData(csvContent);
       
       // Process transaction data according to business rules
-      let updatedProducts: ProductItem[] = [];
-      const productMap = new Map<string, boolean>(); // Track product names to avoid duplicates
+      const updatedProducts: ProductItem[] = [];
+      const productIdMap = new Map<string, ProductItem>();
       
       transactions.forEach(transaction => {
         // Skip rows missing productId or productName
@@ -222,11 +219,9 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
         };
         
         let productName = transaction.productName;
-        const productKey = `${transaction.productId}-${transaction.productName}`;
         
         // If lever is Microsoft Flight Simulator 2024, append (2024) to name
         if (transaction.lever === "Microsoft Flight Simulator 2024") {
-          // Only add (2024) if there's not already a (2024) suffix and if the same product name exists in regular FS
           if (!productName.includes('(2024)')) {
             const productNameWithoutYear = productName;
             const regularFSProductExists = transactions.some(t => 
@@ -235,24 +230,17 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
               t.productId === transaction.productId
             );
             
-            if (regularFSProductExists || productMap.has(productKey)) {
+            if (regularFSProductExists) {
               productName = `${productName} (2024)`;
             }
           }
         }
         
-        // Create or update product entry if it doesn't already exist
-        const existingProductIndex = updatedProducts.findIndex(p => 
-          p.productId === transaction.productId && 
-          (p.productName === productName || p.productName === transaction.productName || 
-           (transaction.lever === "Microsoft Flight Simulator 2024" && 
-            p.productName === `${transaction.productName} (2024)`))
-        );
-        
-        if (existingProductIndex === -1) {
+        // If we haven't processed this product ID yet, add it to our products list
+        if (!productIdMap.has(transaction.productId)) {
           const cleanedEarningDate = transaction.earningDate ? cleanDate(transaction.earningDate) : cleanDate(transaction.transactionDate);
           
-          const newProduct = {
+          const newProduct: ProductItem = {
             productId: transaction.productId,
             productName: productName,
             date: cleanedEarningDate,
@@ -260,9 +248,19 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
           };
           
           updatedProducts.push(newProduct);
-          productMap.set(productKey, true);
+          productIdMap.set(transaction.productId, newProduct);
+        } else {
+          // If the product already exists and has a different name due to 2024 version
+          const existingProduct = productIdMap.get(transaction.productId);
+          if (existingProduct && transaction.lever === "Microsoft Flight Simulator 2024" && 
+              !existingProduct.productName.includes('(2024)') && productName.includes('(2024)')) {
+            existingProduct.productName = productName;
+          }
         }
       });
+      
+      console.log("Processed products:", updatedProducts.length);
+      console.log("Processed transactions:", transactions.length);
       
       // Save processed data to localStorage to simulate persistence
       localStorage.setItem('processedTransactions', JSON.stringify(transactions));
@@ -272,6 +270,6 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
         products: updatedProducts,
         transactions
       });
-    }, 2000);
+    }, 1000);
   });
 }

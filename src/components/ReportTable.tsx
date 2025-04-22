@@ -116,7 +116,7 @@ const ReportTable = () => {
           <ScrollArea className="h-full">
             <div className="w-full overflow-auto">
               <Table>
-                <TableHeader>
+                <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
                     <TableHead className="min-w-[350px] whitespace-normal">Product Name</TableHead>
                     <TableHead className="text-right whitespace-nowrap">Total Sales</TableHead>

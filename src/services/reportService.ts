@@ -1,3 +1,4 @@
+
 import { ProductItem, TransactionItem } from './fileService';
 
 export interface ReportItem {
@@ -89,88 +90,82 @@ export async function generateReport(
 }
 
 export async function getProductDictionary(): Promise<ProductItem[]> {
-  // In a real implementation, this would fetch from DB_Products.json
   return new Promise((resolve) => {
-    setTimeout(() => {
-      // Check if we have stored products in localStorage
-      const storedProducts = localStorage.getItem('productDictionary');
-      if (storedProducts) {
-        try {
-          const parsedProducts = JSON.parse(storedProducts);
-          console.log("Loaded products from localStorage:", parsedProducts.length);
-          resolve(parsedProducts);
-          return;
-        } catch (e) {
-          console.error('Error parsing stored products:', e);
-        }
+    // Check if we have stored products in localStorage
+    const storedProducts = localStorage.getItem('productDictionary');
+    if (storedProducts) {
+      try {
+        const parsedProducts = JSON.parse(storedProducts);
+        console.log("Loaded products from localStorage:", parsedProducts.length);
+        resolve(parsedProducts);
+        return;
+      } catch (e) {
+        console.error('Error parsing stored products:', e);
       }
-      
-      // Fallback mock data
-      const mockDictionary = [
-        { productId: "FS001", productName: "Weather Preset Pack", date: "2023-05-15", isEcho: true },
-        { productId: "FS002", productName: "City Landmarks", date: "2023-06-20", isEcho: false },
-        { productId: "FS003", productName: "Livery Collection (2024)", date: "2023-06-25", isEcho: false },
-        { productId: "FS004", productName: "Livery Collection", date: "2023-07-10", isEcho: false },
-      ];
-      
-      console.log("Using fallback mock product dictionary");
-      resolve(mockDictionary);
-    }, 300); // Reduced timeout for better UX
+    }
+    
+    // Fallback mock data
+    const mockDictionary = [
+      { productId: "FS001", productName: "Weather Preset Pack", date: "2023-05-15", isEcho: true },
+      { productId: "FS002", productName: "City Landmarks", date: "2023-06-20", isEcho: false },
+      { productId: "FS003", productName: "Livery Collection (2024)", date: "2023-06-25", isEcho: false },
+      { productId: "FS004", productName: "Livery Collection", date: "2023-07-10", isEcho: false },
+    ];
+    
+    console.log("Using fallback mock product dictionary");
+    resolve(mockDictionary);
   });
 }
 
 export async function getTransactions(): Promise<TransactionItem[]> {
-  // In a real implementation, this would fetch from uploads/latest.csv
   return new Promise((resolve) => {
-    setTimeout(() => {
-      // Check if we have stored transactions in localStorage
-      const storedTransactions = localStorage.getItem('processedTransactions');
-      if (storedTransactions) {
-        try {
-          const parsedTransactions = JSON.parse(storedTransactions);
-          console.log("Loaded transactions from localStorage:", parsedTransactions.length);
-          resolve(parsedTransactions);
-          return;
-        } catch (e) {
-          console.error('Error parsing stored transactions:', e);
-        }
+    // Check if we have stored transactions in localStorage
+    const storedTransactions = localStorage.getItem('processedTransactions');
+    if (storedTransactions) {
+      try {
+        const parsedTransactions = JSON.parse(storedTransactions);
+        console.log("Loaded transactions from localStorage:", parsedTransactions.length);
+        resolve(parsedTransactions);
+        return;
+      } catch (e) {
+        console.error('Error parsing stored transactions:', e);
       }
-      
-      // Fallback mock data
-      const mockTransactions = [
-        { 
-          productId: "FS001", 
-          productName: "Weather Preset Pack", 
-          lever: "Flight Simulator Marketplace", 
-          transactionDate: "2023-05-15", 
-          transactionAmountUSD: 239.94 
-        },
-        { 
-          productId: "FS002", 
-          productName: "City Landmarks", 
-          lever: "Flight Simulator Marketplace", 
-          transactionDate: "2023-06-20", 
-          transactionAmountUSD: 89.97 
-        },
-        { 
-          productId: "FS003", 
-          productName: "Livery Collection", 
-          lever: "Microsoft Flight Simulator 2024", 
-          transactionDate: "2023-06-25", 
-          transactionAmountUSD: 124.95 
-        },
-        { 
-          productId: "FS004", 
-          productName: "Livery Collection", 
-          lever: "Flight Simulator Marketplace", 
-          transactionDate: "2023-07-10", 
-          transactionAmountUSD: 149.95 
-        }
-      ];
-      
-      console.log("Using fallback mock transactions");
-      resolve(mockTransactions);
-    }, 300); // Reduced timeout for better UX
+    }
+    
+    // Fallback mock data
+    const mockTransactions = [
+      { 
+        productId: "FS001", 
+        productName: "Weather Preset Pack", 
+        lever: "Flight Simulator Marketplace", 
+        transactionDate: "2023-05-15", 
+        transactionAmountUSD: 239.94 
+      },
+      { 
+        productId: "FS002", 
+        productName: "City Landmarks", 
+        lever: "Flight Simulator Marketplace", 
+        transactionDate: "2023-06-20", 
+        transactionAmountUSD: 89.97 
+      },
+      { 
+        productId: "FS003", 
+        productName: "Livery Collection", 
+        lever: "Microsoft Flight Simulator 2024", 
+        transactionDate: "2023-06-25", 
+        transactionAmountUSD: 124.95 
+      },
+      { 
+        productId: "FS004", 
+        productName: "Livery Collection", 
+        lever: "Flight Simulator Marketplace", 
+        transactionDate: "2023-07-10", 
+        transactionAmountUSD: 149.95 
+      }
+    ];
+    
+    console.log("Using fallback mock transactions");
+    resolve(mockTransactions);
   });
 }
 
@@ -188,7 +183,7 @@ export async function saveProductDictionary(products: ProductItem[]): Promise<bo
       localStorage.setItem('echoProducts', JSON.stringify(echoProducts));
       
       resolve(true);
-    }, 1000);
+    }, 500);
   });
 }
 
@@ -198,11 +193,16 @@ export async function updateProductFromCSV(processedData: { products: ProductIte
     setTimeout(() => {
       console.log('Updating product dictionary with processed CSV data:', processedData);
       
-      // Store in localStorage to simulate persistence
-      localStorage.setItem('productDictionary', JSON.stringify(processedData.products));
-      localStorage.setItem('processedTransactions', JSON.stringify(processedData.transactions));
+      // Ensure we're storing all products and transactions correctly
+      if (processedData.products && Array.isArray(processedData.products)) {
+        localStorage.setItem('productDictionary', JSON.stringify(processedData.products));
+      }
+      
+      if (processedData.transactions && Array.isArray(processedData.transactions)) {
+        localStorage.setItem('processedTransactions', JSON.stringify(processedData.transactions));
+      }
       
       resolve(true);
-    }, 1000);
+    }, 500);
   });
 }
