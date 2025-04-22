@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +8,7 @@ import { getProductDictionary, saveProductDictionary } from '@/services/reportSe
 import { useAppContext } from '@/context/AppContext';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Trash2 } from 'lucide-react';
 
 const ControlPanel = () => {
   const { isAuthenticated, setIsAuthenticated } = useAppContext();
@@ -86,6 +86,12 @@ const ControlPanel = () => {
     }
   };
 
+  const handleDelete = (index: number) => {
+    const updatedProducts = products.filter((_, i) => i !== index);
+    setProducts(updatedProducts);
+    toast.success('Product removed from dictionary');
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="glass-card rounded-lg p-6 max-w-md mx-auto">
@@ -145,6 +151,7 @@ const ControlPanel = () => {
               <TableHead>Product Name</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Echo</TableHead>
+              <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -176,11 +183,21 @@ const ControlPanel = () => {
                     />
                   </div>
                 </TableCell>
+                <TableCell>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => handleDelete(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
             {products.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   No products found in dictionary
                 </TableCell>
               </TableRow>
