@@ -1,3 +1,4 @@
+
 import { ProductItem, TransactionItem } from './fileService';
 
 export interface ReportItem {
@@ -55,8 +56,8 @@ export async function generateReport(
     const key = transaction.productId;
     const currentEntry = productTotals.get(key) || { amount: 0, name: transaction.productName };
     
-    // USE SPECIFICALLY transactionAmountUSD FOR CALCULATION
-    const transactionAmount = transaction.transactionAmountUSD;
+    // USE SPECIFICALLY transactionAmount FOR CALCULATION
+    const transactionAmount = transaction.transactionAmount;
     
     currentEntry.amount += typeof transactionAmount === 'number' 
       ? transactionAmount 
@@ -99,16 +100,9 @@ export async function getProductDictionary(): Promise<ProductItem[]> {
       }
     }
     
-    // Fallback mock data
-    const mockDictionary = [
-      { productId: "FS001", productName: "Weather Preset Pack", date: "2023-05-15", isEcho: true },
-      { productId: "FS002", productName: "City Landmarks", date: "2023-06-20", isEcho: false },
-      { productId: "FS003", productName: "Livery Collection (2024)", date: "2023-06-25", isEcho: false },
-      { productId: "FS004", productName: "Livery Collection", date: "2023-07-10", isEcho: false },
-    ];
-    
-    console.log("Using fallback mock product dictionary");
-    resolve(mockDictionary);
+    // No fallback mock data - return empty array instead
+    console.log("No product dictionary found in localStorage, returning empty array");
+    resolve([]);
   });
 }
 
@@ -127,40 +121,9 @@ export async function getTransactions(): Promise<TransactionItem[]> {
       }
     }
     
-    // Fallback mock data
-    const mockTransactions = [
-      { 
-        productId: "FS001", 
-        productName: "Weather Preset Pack", 
-        lever: "Flight Simulator Marketplace", 
-        transactionDate: "2023-05-15", 
-        transactionAmountUSD: 239.94 
-      },
-      { 
-        productId: "FS002", 
-        productName: "City Landmarks", 
-        lever: "Flight Simulator Marketplace", 
-        transactionDate: "2023-06-20", 
-        transactionAmountUSD: 89.97 
-      },
-      { 
-        productId: "FS003", 
-        productName: "Livery Collection", 
-        lever: "Microsoft Flight Simulator 2024", 
-        transactionDate: "2023-06-25", 
-        transactionAmountUSD: 124.95 
-      },
-      { 
-        productId: "FS004", 
-        productName: "Livery Collection", 
-        lever: "Flight Simulator Marketplace", 
-        transactionDate: "2023-07-10", 
-        transactionAmountUSD: 149.95 
-      }
-    ];
-    
-    console.log("Using fallback mock transactions");
-    resolve(mockTransactions);
+    // No fallback mock data - return empty array
+    console.log("No transactions found in localStorage, returning empty array");
+    resolve([]);
   });
 }
 
@@ -183,16 +146,37 @@ export async function saveProductDictionary(products: ProductItem[]): Promise<bo
 }
 
 export async function updateProductFromCSV(processedData: { products: ProductItem[], transactions: TransactionItem[] }): Promise<boolean> {
-  // Simulate updating the product dictionary with new data from CSV
+  // Get existing product dictionary first
+  const existingDictionary = await getProductDictionary();
+  
   return new Promise((resolve) => {
     setTimeout(() => {
-      console.log('Updating product dictionary with processed CSV data:', processedData);
+      console.log('Updating product dictionary with processed CSV data');
+      console.log('Existing dictionary items:', existingDictionary.length);
+      console.log('New products from CSV:', processedData.products.length);
       
-      // Ensure we're storing all products and transactions correctly
-      if (processedData.products && Array.isArray(processedData.products)) {
-        localStorage.setItem('productDictionary', JSON.stringify(processedData.products));
-      }
+      // Create a map of existing products for fast lookup
+      const existingProductMap = new Map<string, ProductItem>();
+      existingDictionary.forEach(product => {
+        existingProductMap.set(product.productId, product);
+      });
       
+      // Merge new products with existing ones (preserving existing entries)
+      const mergedProducts: ProductItem[] = [...existingDictionary];
+      
+      // Only add new products that don't exist in the dictionary
+      processedData.products.forEach(newProduct => {
+        if (!existingProductMap.has(newProduct.productId)) {
+          mergedProducts.push(newProduct);
+        }
+      });
+      
+      console.log('Merged dictionary size:', mergedProducts.length);
+      
+      // Store the merged products
+      localStorage.setItem('productDictionary', JSON.stringify(mergedProducts));
+      
+      // Still store all transactions as before
       if (processedData.transactions && Array.isArray(processedData.transactions)) {
         localStorage.setItem('processedTransactions', JSON.stringify(processedData.transactions));
       }

@@ -1,4 +1,3 @@
-
 export interface FileUploadResponse {
   success: boolean;
   message: string;
@@ -65,6 +64,7 @@ export interface TransactionItem {
   productName: string;
   lever: string;
   transactionDate: string;
+  transactionAmount: number;
   transactionAmountUSD: number;
   earningDate?: string;
 }
@@ -78,6 +78,7 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productName: "A320 v2 Europe",
       lever: "Microsoft Flight Simulator",
       transactionDate: "2025-04-16",
+      transactionAmount: 100,
       transactionAmountUSD: 100,
       earningDate: "2025-04-16"
     },
@@ -86,6 +87,7 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productName: "Liveries Collection",
       lever: "Microsoft Flight Simulator",
       transactionDate: "2025-04-17",
+      transactionAmount: 100,
       transactionAmountUSD: 100,
       earningDate: "2025-04-17"
     },
@@ -94,6 +96,7 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productName: "A320 v2 North A",
       lever: "Microsoft Flight Simulator",
       transactionDate: "2025-04-17",
+      transactionAmount: 100,
       transactionAmountUSD: 100,
       earningDate: "2025-04-17"
     },
@@ -102,6 +105,7 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productName: "REALISTIC VFR",
       lever: "Microsoft Flight Simulator",
       transactionDate: "2025-04-16",
+      transactionAmount: 100,
       transactionAmountUSD: 100,
       earningDate: "2025-04-16"
     },
@@ -110,6 +114,7 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productName: "A320 v2 Europe",
       lever: "Microsoft Flight Simulator 2024",
       transactionDate: "2025-04-17",
+      transactionAmount: 100,
       transactionAmountUSD: 100,
       earningDate: "2025-04-17"
     },
@@ -118,6 +123,7 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productName: "A320 v2 NA & E",
       lever: "Microsoft Flight Simulator",
       transactionDate: "2025-04-17",
+      transactionAmount: 100,
       transactionAmountUSD: 100,
       earningDate: "2025-04-17"
     },
@@ -126,6 +132,7 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productName: "Weather Preset",
       lever: "Microsoft Flight Simulator",
       transactionDate: "2025-04-17",
+      transactionAmount: 100,
       transactionAmountUSD: 100,
       earningDate: "2025-04-17"
     },
@@ -134,6 +141,7 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productName: "Liveries Collection",
       lever: "Microsoft Flight Simulator 2024",
       transactionDate: "2025-04-16",
+      transactionAmount: 100,
       transactionAmountUSD: 100,
       earningDate: "2025-04-16"
     },
@@ -142,6 +150,7 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productName: "Landing Rate",
       lever: "Microsoft Flight Simulator",
       transactionDate: "2025-04-16",
+      transactionAmount: 100,
       transactionAmountUSD: 100,
       earningDate: "2025-04-16"
     },
@@ -150,6 +159,7 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productName: "B737 Max Amber",
       lever: "Microsoft Flight Simulator",
       transactionDate: "2025-04-17",
+      transactionAmount: 100,
       transactionAmountUSD: 100,
       earningDate: "2025-04-17"
     },
@@ -158,6 +168,7 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productName: "Enhanced Taxiw",
       lever: "Microsoft Flight Simulator",
       transactionDate: "2025-04-16",
+      transactionAmount: 100,
       transactionAmountUSD: 100,
       earningDate: "2025-04-16"
     },
@@ -166,6 +177,7 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productName: "A321LR America",
       lever: "Microsoft Flight Simulator",
       transactionDate: "2025-04-16",
+      transactionAmount: 100,
       transactionAmountUSD: 100,
       earningDate: "2025-04-16"
     },
@@ -174,6 +186,7 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productName: "A320 v2 South A",
       lever: "Microsoft Flight Simulator",
       transactionDate: "2025-04-17",
+      transactionAmount: 100,
       transactionAmountUSD: 100,
       earningDate: "2025-04-17"
     },
@@ -182,6 +195,7 @@ function parseCSVData(csvContent: string): TransactionItem[] {
       productName: "B737 Max Emer",
       lever: "Microsoft Flight Simulator 2024",
       transactionDate: "2025-04-17",
+      transactionAmount: 100,
       transactionAmountUSD: 100,
       earningDate: "2025-04-17"
     }
@@ -191,6 +205,25 @@ function parseCSVData(csvContent: string): TransactionItem[] {
 }
 
 export async function processFile(filePath: string): Promise<ProcessedData> {
+  // First get existing product dictionary to preserve it
+  let existingDictionary: ProductItem[] = [];
+  
+  try {
+    const storedDictionary = localStorage.getItem('productDictionary');
+    if (storedDictionary) {
+      existingDictionary = JSON.parse(storedDictionary);
+      console.log("Loaded existing dictionary with", existingDictionary.length, "products");
+    }
+  } catch (e) {
+    console.error("Error loading existing dictionary:", e);
+  }
+  
+  // Create a map of existing products for fast lookup
+  const existingProductMap = new Map<string, ProductItem>();
+  existingDictionary.forEach(product => {
+    existingProductMap.set(product.productId, product);
+  });
+  
   return new Promise((resolve) => {
     setTimeout(() => {
       // In a real implementation, this would read from the actual CSV file
@@ -218,43 +251,54 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
           return dateStr;
         };
         
-        let productName = transaction.productName;
-        
-        // If lever is Microsoft Flight Simulator 2024, append (2024) to name
-        if (transaction.lever === "Microsoft Flight Simulator 2024") {
-          if (!productName.includes('(2024)')) {
-            const productNameWithoutYear = productName;
-            const regularFSProductExists = transactions.some(t => 
-              t.productName === productNameWithoutYear && 
-              t.lever !== "Microsoft Flight Simulator 2024" &&
-              t.productId === transaction.productId
-            );
-            
-            if (regularFSProductExists) {
-              productName = `${productName} (2024)`;
+        // Check if this product already exists in our dictionary
+        if (existingProductMap.has(transaction.productId)) {
+          // If it exists in our dictionary, use that entry and don't modify it
+          const existingProduct = existingProductMap.get(transaction.productId)!;
+          if (!productIdMap.has(transaction.productId)) {
+            productIdMap.set(transaction.productId, existingProduct);
+            updatedProducts.push(existingProduct);
+          }
+        } else {
+          // This is a new product not in our dictionary
+          let productName = transaction.productName;
+          
+          // If lever is Microsoft Flight Simulator 2024, append (2024) to name
+          if (transaction.lever === "Microsoft Flight Simulator 2024") {
+            if (!productName.includes('(2024)')) {
+              const productNameWithoutYear = productName;
+              const regularFSProductExists = transactions.some(t => 
+                t.productName === productNameWithoutYear && 
+                t.lever !== "Microsoft Flight Simulator 2024" &&
+                t.productId === transaction.productId
+              );
+              
+              if (regularFSProductExists) {
+                productName = `${productName} (2024)`;
+              }
             }
           }
-        }
-        
-        // If we haven't processed this product ID yet, add it to our products list
-        if (!productIdMap.has(transaction.productId)) {
-          const cleanedEarningDate = transaction.earningDate ? cleanDate(transaction.earningDate) : cleanDate(transaction.transactionDate);
           
-          const newProduct: ProductItem = {
-            productId: transaction.productId,
-            productName: productName,
-            date: cleanedEarningDate,
-            isEcho: false // Default new products to non-echo
-          };
-          
-          updatedProducts.push(newProduct);
-          productIdMap.set(transaction.productId, newProduct);
-        } else {
-          // If the product already exists and has a different name due to 2024 version
-          const existingProduct = productIdMap.get(transaction.productId);
-          if (existingProduct && transaction.lever === "Microsoft Flight Simulator 2024" && 
-              !existingProduct.productName.includes('(2024)') && productName.includes('(2024)')) {
-            existingProduct.productName = productName;
+          // If we haven't processed this product ID yet, add it to our products list
+          if (!productIdMap.has(transaction.productId)) {
+            const cleanedEarningDate = transaction.earningDate ? cleanDate(transaction.earningDate) : cleanDate(transaction.transactionDate);
+            
+            const newProduct: ProductItem = {
+              productId: transaction.productId,
+              productName: productName,
+              date: cleanedEarningDate,
+              isEcho: false // Default new products to non-echo
+            };
+            
+            updatedProducts.push(newProduct);
+            productIdMap.set(transaction.productId, newProduct);
+          } else {
+            // If the product already exists and has a different name due to 2024 version
+            const existingProduct = productIdMap.get(transaction.productId);
+            if (existingProduct && transaction.lever === "Microsoft Flight Simulator 2024" && 
+                !existingProduct.productName.includes('(2024)') && productName.includes('(2024)')) {
+              existingProduct.productName = productName;
+            }
           }
         }
       });
@@ -262,11 +306,8 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
       console.log("Processed products:", updatedProducts.length);
       console.log("Processed transactions:", transactions.length);
       
-      // Save processed data to localStorage to simulate persistence
-      localStorage.setItem('processedTransactions', JSON.stringify(transactions));
-      localStorage.setItem('productDictionary', JSON.stringify(updatedProducts));
-      
       resolve({
+        // Return both existing and new products
         products: updatedProducts,
         transactions
       });
