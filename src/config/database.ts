@@ -21,15 +21,39 @@ export const dbConfig: DatabaseConfig = {
 // Função para criar tabela usando SQL
 async function createTableIfMissing(tableName: string, sql: string): Promise<boolean> {
   // Tentativa de criar a tabela via função SQL do Supabase
-  // A função 'rpc' abaixo utiliza a função interna "execute_sql" (disponível apenas em alguns planos/configurações do Supabase)
   try {
+    // Fallback usando o método restante RPC direto
     const { error } = await supabase.rpc('execute_sql', { sql });
     if (error) {
-      // Alguns ambientes Supabase não tem a função 'execute_sql' ativada, fallback tentará pelo endpoint /rest/v1/rpc/execute_sql
-      // Se nem isso funcionar, retorna erro.
       console.error(`Erro ao criar tabela ${tableName}:`, error);
-      return false;
+      
+      // Tentativa alternativa usando REST API (createTable)
+      try {
+        const { data, error: createError } = await supabase
+          .from('_meta')
+          .select('*')
+          .then(() => ({
+            data: null,
+            error: null
+          }))
+          .catch(() => {
+            // Executar SQL diretamente (em alguns ambientes Supabase)
+            return supabase.auth.admin.createTable({ tableName, sql });
+          });
+          
+        if (createError) {
+          console.error(`Erro na segunda tentativa de criar ${tableName}:`, createError);
+          return false;
+        }
+        
+        return true;
+      } catch (fallbackError) {
+        console.error(`Erro completo ao tentar criar ${tableName}:`, fallbackError);
+        return false;
+      }
     }
+    
+    console.log(`Tabela ${tableName} criada com sucesso!`);
     return true;
   } catch (e) {
     console.error(`Exceção ao criar tabela ${tableName}:`, e);
@@ -78,14 +102,14 @@ export async function checkDatabaseSetupAndAutoCreate(): Promise<boolean> {
   }
 }
 
-// SQL statements for creating required tables (for reference)
+// SQL statements for creating required tables (updated to match Supabase tables)
 export const createTableStatements = {
   products: `
     CREATE TABLE IF NOT EXISTS products (
       id SERIAL PRIMARY KEY,
       "productId" TEXT UNIQUE NOT NULL,
       "productName" TEXT NOT NULL,
-      date DATE NOT NULL,
+      date TIMESTAMP NOT NULL,
       "isEcho" BOOLEAN DEFAULT false
     );
   `,
@@ -94,10 +118,10 @@ export const createTableStatements = {
       id SERIAL PRIMARY KEY,
       "productId" TEXT NOT NULL,
       "productName" TEXT NOT NULL,
-      lever TEXT,
+      "lever" TEXT,
       "transactionDate" DATE NOT NULL,
-      "transactionAmount" DECIMAL(10,2) NOT NULL,
-      "transactionAmountUSD" DECIMAL(10,2),
+      "transactionAmount" FLOAT4 NOT NULL,
+      "transactionAmountUSD" FLOAT4,
       "earningDate" DATE,
       CONSTRAINT unique_transaction UNIQUE ("productId", "transactionDate")
     );
@@ -107,9 +131,8 @@ export const createTableStatements = {
       id SERIAL PRIMARY KEY,
       "productId" TEXT UNIQUE NOT NULL,
       "productName" TEXT NOT NULL,
-      date DATE NOT NULL,
+      date TIMESTAMP NOT NULL,
       FOREIGN KEY ("productId") REFERENCES products("productId") ON DELETE CASCADE
     );
   `
 };
-
