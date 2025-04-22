@@ -1,11 +1,23 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import { useAppContext } from "@/context/AppContext";
+import Sidebar from "@/components/Sidebar";
+import Dashboard from "@/components/Dashboard";
+import ReportTable from "@/components/ReportTable";
+import ControlPanel from "@/components/ControlPanel";
 
 const Index = () => {
+  const { activeSection } = useAppContext();
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-background p-6 text-foreground">
+      <div className="flex gap-6 mx-auto max-w-[1200px]">
+        <Sidebar />
+        
+        <div className="flex-1 max-w-[900px]">
+          {activeSection === 'dashboard' && <Dashboard />}
+          {activeSection === 'reports' && <ReportTable />}
+          {activeSection === 'control-panel' && <ControlPanel />}
+        </div>
       </div>
     </div>
   );
