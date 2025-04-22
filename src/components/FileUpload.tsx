@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
@@ -10,6 +9,7 @@ const FileUpload = () => {
   const { fileStatus, setFileStatus } = useAppContext();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -35,6 +35,11 @@ const FileUpload = () => {
     }
   };
 
+  const handleButtonClick = () => {
+    // Trigger click on hidden file input
+    fileInputRef.current?.click();
+  };
+
   return (
     <div className="glass-card rounded-lg p-6">
       <h2 className="text-lg font-medium mb-4">Upload File</h2>
@@ -43,21 +48,21 @@ const FileUpload = () => {
         <div className="flex flex-col items-center justify-center py-6 border-2 border-dashed border-gray-700 rounded-lg">
           <Upload className="mb-3 text-gray-400" size={36} />
           
-          <label className="cursor-pointer">
-            <Button 
-              variant="outline" 
-              disabled={uploading}
-              className="mb-2"
-            >
-              {uploading ? 'Uploading...' : 'Select Partner Center Export'}
-            </Button>
-            <input 
-              type="file" 
-              accept=".csv,.zip" 
-              onChange={handleFileChange} 
-              className="hidden" 
-            />
-          </label>
+          <Button 
+            variant="outline" 
+            disabled={uploading}
+            className="mb-2"
+            onClick={handleButtonClick}
+          >
+            {uploading ? 'Uploading...' : 'Select Partner Center Export'}
+          </Button>
+          <input 
+            ref={fileInputRef}
+            type="file" 
+            accept=".csv,.zip" 
+            onChange={handleFileChange} 
+            className="hidden" 
+          />
           
           <p className="text-sm text-gray-400 mt-2 text-center">
             Send here the Partner Center export (.csv or .zip)
