@@ -1,14 +1,17 @@
+
 import { useState, useRef } from 'react';
 import { Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
-import { uploadFile } from '@/services/fileService';
+import { uploadFile, processFile } from '@/services/fileService';
+import { updateProductFromCSV } from '@/services/reportService';
 import { toast } from 'sonner';
 
 const FileUpload = () => {
   const { fileStatus, setFileStatus } = useAppContext();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -23,6 +26,9 @@ const FileUpload = () => {
       
       if (response.success) {
         setFileStatus('uploaded');
+        if (response.filePath) {
+          setUploadedFilePath(response.filePath);
+        }
         toast.success('File uploaded successfully');
       } else {
         toast.error(response.message || 'Error uploading file');

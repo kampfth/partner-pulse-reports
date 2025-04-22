@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useAppContext } from '@/context/AppContext';
 import { processFile } from '@/services/fileService';
+import { updateProductFromCSV } from '@/services/reportService';
 import { toast } from 'sonner';
 
 const FilterForm = () => {
@@ -18,7 +19,8 @@ const FilterForm = () => {
     endDate,
     setEndDate,
     echoOnly,
-    setEchoOnly
+    setEchoOnly,
+    uploadedFilePath
   } = useAppContext();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -29,13 +31,22 @@ const FilterForm = () => {
       return;
     }
 
+    if (!uploadedFilePath) {
+      toast.error('No file path available');
+      return;
+    }
+
     setIsProcessing(true);
     setFileStatus('processing');
 
     try {
-      const result = await processFile();
+      // Process the uploaded file
+      const processedData = await processFile(uploadedFilePath);
       
-      if (result.success) {
+      // Update product dictionary with new data
+      const result = await updateProductFromCSV(processedData);
+      
+      if (result) {
         setFileStatus('processed');
         toast.success('File processed successfully');
       } else {

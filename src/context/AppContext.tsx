@@ -17,6 +17,8 @@ interface AppContextType {
   setEndDate: (date: string) => void;
   echoOnly: boolean;
   setEchoOnly: (value: boolean) => void;
+  uploadedFilePath: string | null;
+  setUploadedFilePath: (path: string | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -28,6 +30,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [echoOnly, setEchoOnly] = useState(false);
+  const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
 
   return (
     <AppContext.Provider
@@ -43,7 +46,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         endDate,
         setEndDate,
         echoOnly,
-        setEchoOnly
+        setEchoOnly,
+        uploadedFilePath,
+        setUploadedFilePath
       }}
     >
       {children}

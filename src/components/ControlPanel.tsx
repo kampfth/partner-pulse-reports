@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +9,7 @@ import { getProductDictionary, saveProductDictionary } from '@/services/reportSe
 import { useAppContext } from '@/context/AppContext';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
 
 const ControlPanel = () => {
   const { isAuthenticated, setIsAuthenticated } = useAppContext();
@@ -92,6 +93,18 @@ const ControlPanel = () => {
     toast.success('Product removed from dictionary');
   };
 
+  const handleAddProduct = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const newProduct = {
+      productId: `P-${Math.floor(Math.random() * 10000)}`,
+      productName: "New Product",
+      date: today,
+      isEcho: false
+    };
+    
+    setProducts([...products, newProduct]);
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="glass-card rounded-lg p-6 max-w-md mx-auto">
@@ -135,12 +148,22 @@ const ControlPanel = () => {
     <div className="glass-card rounded-lg p-6 h-full flex flex-col">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-lg font-medium">Product Dictionary Management</h2>
-        <Button 
-          onClick={handleSave}
-          disabled={saving}
-        >
-          {saving ? 'Saving...' : 'Save All Changes'}
-        </Button>
+        <div className="space-x-2">
+          <Button 
+            onClick={handleAddProduct}
+            variant="outline"
+            disabled={saving}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Product
+          </Button>
+          <Button 
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : 'Save All Changes'}
+          </Button>
+        </div>
       </div>
       
       <div className="flex-1 overflow-auto">
@@ -151,14 +174,14 @@ const ControlPanel = () => {
               <TableHead>Product Name</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Echo</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
+              <TableHead className="w-[50px]">Delete</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {products.map((product, index) => (
               <TableRow key={product.productId}>
                 <TableCell className="font-mono">
-                  {product.productId.substring(0, 4)}...
+                  {product.productId}
                 </TableCell>
                 <TableCell>
                   <Input
