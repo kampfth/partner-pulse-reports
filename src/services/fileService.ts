@@ -1,3 +1,4 @@
+
 export interface FileUploadResponse {
   success: boolean;
   message: string;
@@ -55,16 +56,16 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
   // Simulate file processing
   return new Promise((resolve) => {
     setTimeout(() => {
-      // Simulate parsing CSV data
+      // Mock data that matches the expected Partner Center export format
       const mockCSVData = [
         // Header line (would be skipped in real parsing)
         // "productId,productName,lever,transactionDate,transactionAmountUSD",
         
-        // Mock data rows that would come from CSV
+        // Mock data rows that would come from CSV - matching the exact data from images
         { 
           productId: "P-123", 
           productName: "Microsoft Flight Simulator 2024", 
-          lever: "Microsoft Flight Simulator", 
+          lever: "Microsoft Flight Simulator 2024", 
           transactionDate: "2023-05-15", 
           transactionAmountUSD: 1249.99 
         },
@@ -113,9 +114,14 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
       ];
       
       // Process transaction data according to business rules
+      // Get existing products from DB_Products.json
       const existingProducts = [
         { productId: "P-123", productName: "Microsoft Flight Simulator 2024", date: "2023-05-15", isEcho: true },
+        { productId: "P-456", productName: "Microsoft Office 365 Enterprise", date: "2022-11-03", isEcho: false },
         { productId: "P-789", productName: "Azure Cloud Services Premium", date: "2023-02-21", isEcho: true },
+        { productId: "P-012", productName: "Windows 11 Pro", date: "2022-09-17", isEcho: false },
+        { productId: "P-345", productName: "Microsoft Dynamics 365", date: "2023-01-09", isEcho: false },
+        { productId: "P-567", productName: "Weather Presets", date: "2023-06-12", isEcho: false },
       ];
       
       // Add new products based on transactions
@@ -134,10 +140,10 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
           // Create new product entry
           let newProductName = transaction.productName;
           
-          // If lever contains "2024" and a product with same name exists, append (2024)
+          // If lever contains "Microsoft Flight Simulator 2024" and a product with same name exists, append (2024)
           if (transaction.lever === "Microsoft Flight Simulator 2024") {
             const similarProduct = updatedProducts.find(p => 
-              p.productName === transaction.productName && !p.productName.includes("(2024)")
+              p.productName === transaction.productName && p.productId !== transaction.productId
             );
             
             if (similarProduct) {
