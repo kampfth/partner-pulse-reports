@@ -35,6 +35,20 @@ export async function checkDatabaseSetup(): Promise<{
     
     console.log(`Tables direct access check: products=${productsExists}, transactions=${transactionsExists}, echoProducts=${echoProductsExists}`);
     
+    // Create RPC function for checking RLS permissions if it doesn't exist
+    try {
+      const { error: rpcError } = await supabase.rpc('check_rls_permissions');
+      if (rpcError && rpcError.message.includes('function does not exist')) {
+        console.log("Creating check_rls_permissions function...");
+        const { error: createError } = await supabase.rpc('create_check_rls_function');
+        if (createError) {
+          console.error("Error creating RLS check function:", createError);
+        }
+      }
+    } catch (err) {
+      console.log("RPC function might not exist yet:", err);
+    }
+    
     return {
       isReady: productsExists && transactionsExists && echoProductsExists,
       tablesStatus: {
@@ -87,7 +101,62 @@ CREATE TABLE IF NOT EXISTS echo_products (
   "productName" TEXT NOT NULL,
   date TIMESTAMP NOT NULL,
   FOREIGN KEY ("productId") REFERENCES products("productId") ON DELETE CASCADE
-);`
+);`,
+
+  rls_check_function: `
+CREATE OR REPLACE FUNCTION check_rls_permissions()
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  result json;
+BEGIN
+  result := json_build_object(
+    'products', (SELECT EXISTS (SELECT 1 FROM products LIMIT 1)),
+    'transactions', (SELECT EXISTS (SELECT 1 FROM transactions LIMIT 1)),
+    'echo_products', (SELECT EXISTS (SELECT 1 FROM echo_products LIMIT 1))
+  );
+  RETURN result;
+END;
+$$;`,
+
+  create_function: `
+CREATE OR REPLACE FUNCTION create_check_rls_function()
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  result json;
+BEGIN
+  -- Create the function that checks RLS permissions
+  EXECUTE '
+  CREATE OR REPLACE FUNCTION check_rls_permissions()
+  RETURNS json
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  AS $func$
+  DECLARE
+    result json;
+  BEGIN
+    result := json_build_object(
+      ''products'', (SELECT EXISTS (SELECT 1 FROM products LIMIT 1)),
+      ''transactions'', (SELECT EXISTS (SELECT 1 FROM transactions LIMIT 1)),
+      ''echo_products'', (SELECT EXISTS (SELECT 1 FROM echo_products LIMIT 1))
+    );
+    RETURN result;
+  END;
+  $func$;
+  ';
+  
+  result := json_build_object('success', true);
+  RETURN result;
+EXCEPTION WHEN OTHERS THEN
+  result := json_build_object('success', false, 'error', SQLERRM);
+  RETURN result;
+END;
+$$;`
 };
 
 // SQL to run all statements in one go (for Supabase SQL Editor)
@@ -100,6 +169,12 @@ ${createTableStatements.transactions}
 
 -- Create Echo Products Table
 ${createTableStatements.echoProducts}
+
+-- Create RLS Check Function
+${createTableStatements.rls_check_function}
+
+-- Create Function Builder
+${createTableStatements.create_function}
 
 -- Set up RLS (Row Level Security) policies
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
@@ -134,4 +209,32 @@ CREATE POLICY "Allow anon read on transactions"
 CREATE POLICY "Allow anon read on echo_products" 
   ON echo_products FOR SELECT TO anon 
   USING (true);
+
+-- Allow anon insert/update for demo purposes (remove in production)
+CREATE POLICY "Allow anon write on products" 
+  ON products FOR INSERT TO anon 
+  WITH CHECK (true);
+
+CREATE POLICY "Allow anon update on products" 
+  ON products FOR UPDATE TO anon 
+  USING (true) 
+  WITH CHECK (true);
+
+CREATE POLICY "Allow anon write on transactions" 
+  ON transactions FOR INSERT TO anon 
+  WITH CHECK (true);
+
+CREATE POLICY "Allow anon update on transactions" 
+  ON transactions FOR UPDATE TO anon 
+  USING (true) 
+  WITH CHECK (true);
+
+CREATE POLICY "Allow anon write on echo_products" 
+  ON echo_products FOR INSERT TO anon 
+  WITH CHECK (true);
+
+CREATE POLICY "Allow anon update on echo_products" 
+  ON echo_products FOR UPDATE TO anon 
+  USING (true) 
+  WITH CHECK (true);
 `;

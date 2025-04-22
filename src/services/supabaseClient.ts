@@ -10,17 +10,36 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-  }
+  },
+  global: {
+    fetch: (...args) => fetch(...args),
+    headers: { 
+      'X-Client-Info': 'partnerpulse',
+    },
+  },
+  db: {
+    schema: 'public',
+  },
+  realtime: {
+    timeout: 60000,
+  },
 });
 
-// Simple helper to test direct table access
+// Simple helper to test direct table access with more debugging
 export async function testTableAccess(tableName: string): Promise<boolean> {
   try {
+    console.log(`Testing access to table ${tableName}...`);
     const { count, error } = await supabase
       .from(tableName)
       .select('*', { count: 'exact', head: true });
     
-    return !error;
+    if (error) {
+      console.error(`Error accessing table ${tableName}:`, error);
+      return false;
+    }
+
+    console.log(`Table ${tableName} access successful, count: ${count}`);
+    return true;
   } catch (err) {
     console.error(`Error testing access to table ${tableName}:`, err);
     return false;

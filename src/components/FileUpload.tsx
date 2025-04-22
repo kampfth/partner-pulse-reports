@@ -47,6 +47,8 @@ const FileUpload = () => {
   const handleReportClick = () => {
     if (fileStatus === 'processed') {
       setActiveSection('reports');
+    } else {
+      toast.info('Please process the file first before viewing reports');
     }
   };
 
@@ -96,12 +98,13 @@ const FileUpload = () => {
           </p>
           
           {fileStatus === 'processed' && (
-            <p 
+            <Button 
+              variant="link"
               className="text-sm text-blue-400 cursor-pointer hover:underline"
               onClick={handleReportClick}
             >
               Click here to see report
-            </p>
+            </Button>
           )}
         </div>
       )}
