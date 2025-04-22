@@ -1,5 +1,8 @@
 
+// Utilizando Supabase ao invés de localStorage
+
 import { ProductItem, TransactionItem } from './fileService';
+import { supabase } from './supabaseClient';
 
 export interface ReportItem {
   name: string;
@@ -7,43 +10,107 @@ export interface ReportItem {
   productId?: string;
 }
 
-// AGORA, NUNCA MAIS USAR PLACEHOLDER OU MOCK. SÓ USAR DADOS REAIS DO LOCALSTORAGE
+// Buscar dicionário de produtos do Supabase
+export async function getProductDictionary(): Promise<ProductItem[]> {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .order('date', { ascending: false });
+
+  if (error) {
+    console.error('Erro ao buscar dicionário de produtos do Supabase:', error);
+    return [];
+  }
+  return data || [];
+}
+
+// Buscar transações do Supabase
+export async function getTransactions(): Promise<TransactionItem[]> {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*');
+
+  if (error) {
+    console.error('Erro ao buscar transações do Supabase:', error);
+    return [];
+  }
+  return data || [];
+}
+
+// Salvar dicionário de produtos no Supabase
+export async function saveProductDictionary(products: ProductItem[]): Promise<boolean> {
+  // Upsert (inseri novos e atualiza existentes)
+  const { error } = await supabase
+    .from('products')
+    .upsert(products, { onConflict: 'productId', ignoreDuplicates: false });
+
+  // Atualiza tabela de echoProducts
+  const echoProducts = products.filter(product => product.isEcho);
+  if (echoProducts.length > 0) {
+    // Coloque sua lógica aqui se desejar manter uma tabela separada, exemplo: "echo_products"
+    await supabase.from('echo_products').upsert(echoProducts, { onConflict: 'productId' });
+  }
+
+  return !error;
+}
+
+// Salvar transações (substituindo ou inserindo)
+export async function saveTransactions(transactions: TransactionItem[]): Promise<boolean> {
+  const { error } = await supabase
+    .from('transactions')
+    .upsert(transactions, { onConflict: 'productId,transactionDate' });
+  return !error;
+}
+
+// Atualiza dicionário de produtos e transactions ao processar CSV
+export async function updateProductFromCSV(processedData: { products: ProductItem[], transactions: TransactionItem[] }): Promise<boolean> {
+  // Pega dicionário existente
+  const existingDictionary = await getProductDictionary();
+  const existingProductMap = new Map<string, ProductItem>();
+  existingDictionary.forEach(product => {
+    existingProductMap.set(product.productId, product);
+  });
+  const mergedProducts: ProductItem[] = [...existingDictionary];
+
+  // Adiciona só produtos NOVOS
+  processedData.products.forEach(newProduct => {
+    if (!existingProductMap.has(newProduct.productId)) {
+      mergedProducts.push(newProduct);
+    }
+  });
+
+  await saveProductDictionary(mergedProducts);
+  await saveTransactions(processedData.transactions);
+
+  return true;
+}
+
+// Geração do relatório
 export async function generateReport(
   startDate?: string,
   endDate?: string,
   echoOnly?: boolean
 ): Promise<ReportItem[]> {
-  console.log("Generating report with filters:", { startDate, endDate, echoOnly });
-
-  // Sempre pegar dicionário real e transações reais do localStorage
   const dictionary = await getProductDictionary();
-  const transactions = await getTransactions();
+  let transactions = await getTransactions();
 
-  // Filtrar normalmente
-  const filteredTransactions = transactions.filter(transaction => {
-    if (!transaction.productId || !transaction.productName) {
-      return false;
-    }
-    if (startDate && transaction.transactionDate < startDate) {
-      return false;
-    }
-    if (endDate && transaction.transactionDate > endDate) {
-      return false;
-    }
-    if (echoOnly) {
-      const product = dictionary.find(p => p.productId === transaction.productId);
-      if (!product || !product.isEcho) {
-        return false;
-      }
-    }
-    return true;
-  });
+  // Filtrar conforme data e echoOnly
+  if (startDate) {
+    transactions = transactions.filter(t => t.transactionDate >= startDate);
+  }
+  if (endDate) {
+    transactions = transactions.filter(t => t.transactionDate <= endDate);
+  }
+  if (echoOnly) {
+    const echoIds = dictionary.filter(p => p.isEcho).map(p => p.productId);
+    transactions = transactions.filter(t => echoIds.includes(t.productId));
+  }
 
   const productTotals = new Map<string, { amount: number; name: string }>();
-  filteredTransactions.forEach(transaction => {
+  transactions.forEach(transaction => {
+    if (!transaction.productId || !transaction.productName) return;
     const key = transaction.productId;
     const currentEntry = productTotals.get(key) || { amount: 0, name: transaction.productName };
-    // SOMA USANDO transactionAmount
     const transactionAmount = transaction.transactionAmount;
     currentEntry.amount += typeof transactionAmount === 'number'
       ? transactionAmount
@@ -61,82 +128,7 @@ export async function generateReport(
     total: parseFloat(data.amount.toFixed(2)),
     productId
   }));
-
   reportData.sort((a, b) => b.total - a.total);
 
   return reportData;
-}
-
-export async function getProductDictionary(): Promise<ProductItem[]> {
-  return new Promise((resolve) => {
-    const storedProducts = localStorage.getItem('productDictionary');
-    if (storedProducts) {
-      try {
-        const parsedProducts = JSON.parse(storedProducts);
-        resolve(parsedProducts);
-        return;
-      } catch (e) {
-        console.error('Error parsing stored products:', e);
-      }
-    }
-    // SEM PLACEHOLDER! Retornar sempre array vazio caso não tiver nada.
-    resolve([]);
-  });
-}
-
-export async function getTransactions(): Promise<TransactionItem[]> {
-  return new Promise((resolve) => {
-    const storedTransactions = localStorage.getItem('processedTransactions');
-    if (storedTransactions) {
-      try {
-        const parsedTransactions = JSON.parse(storedTransactions);
-        resolve(parsedTransactions);
-        return;
-      } catch (e) {
-        console.error('Error parsing stored transactions:', e);
-      }
-    }
-    // SEM PLACEHOLDER! Retornar sempre array vazio caso não tiver nada.
-    resolve([]);
-  });
-}
-
-// Ao salvar o dicionário, só altera localStorage
-export async function saveProductDictionary(products: ProductItem[]): Promise<boolean> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const echoProducts = products.filter(product => product.isEcho);
-      localStorage.setItem('productDictionary', JSON.stringify(products));
-      localStorage.setItem('echoProducts', JSON.stringify(echoProducts));
-      resolve(true);
-    }, 500);
-  });
-}
-
-// Ao processar CSV, NUNCA mais sobrescrever produtos existentes, só adiciona novos produtos se achou no csv
-export async function updateProductFromCSV(processedData: { products: ProductItem[], transactions: TransactionItem[] }): Promise<boolean> {
-  // Pega dicionário existente
-  const existingDictionary = await getProductDictionary();
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const existingProductMap = new Map<string, ProductItem>();
-      existingDictionary.forEach(product => {
-        existingProductMap.set(product.productId, product);
-      });
-      const mergedProducts: ProductItem[] = [...existingDictionary];
-
-      // Adiciona só produtos NOVOS
-      processedData.products.forEach(newProduct => {
-        if (!existingProductMap.has(newProduct.productId)) {
-          mergedProducts.push(newProduct);
-        }
-      });
-
-      localStorage.setItem('productDictionary', JSON.stringify(mergedProducts));
-      if (processedData.transactions && Array.isArray(processedData.transactions)) {
-        localStorage.setItem('processedTransactions', JSON.stringify(processedData.transactions));
-      }
-      resolve(true);
-    }, 500);
-  });
 }

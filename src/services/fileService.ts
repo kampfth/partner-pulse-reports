@@ -1,3 +1,5 @@
+import { supabase } from './supabaseClient';
+
 export interface FileUploadResponse {
   success: boolean;
   message: string;
@@ -205,14 +207,18 @@ function parseCSVData(csvContent: string): TransactionItem[] {
 }
 
 export async function processFile(filePath: string): Promise<ProcessedData> {
-  // First get existing product dictionary to preserve it
   let existingDictionary: ProductItem[] = [];
   
   try {
-    const storedDictionary = localStorage.getItem('productDictionary');
-    if (storedDictionary) {
-      existingDictionary = JSON.parse(storedDictionary);
-      console.log("Loaded existing dictionary with", existingDictionary.length, "products");
+    // Agora busca no Supabase
+    const { data, error } = await supabase
+      .from('products')
+      .select('*');
+    if (data) {
+      existingDictionary = data as ProductItem[];
+    }
+    if (error) {
+      console.error("Erro ao buscar dicionário do Supabase:", error);
     }
   } catch (e) {
     console.error("Error loading existing dictionary:", e);
