@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { dbConfig } from '@/config/database';
 
 export interface FileUploadResponse {
   success: boolean;
@@ -210,15 +211,16 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
   let existingDictionary: ProductItem[] = [];
   
   try {
-    // Agora busca no Supabase
+    // Fetch products from database
     const { data, error } = await supabase
-      .from('products')
+      .from(dbConfig.tables.products)
       .select('*');
-    if (data) {
-      existingDictionary = data as ProductItem[];
-    }
+      
     if (error) {
-      console.error("Erro ao buscar dicionário do Supabase:", error);
+      console.error("Error fetching product dictionary from Supabase:", error);
+    } else if (data) {
+      existingDictionary = data as ProductItem[];
+      console.log(`Loaded ${existingDictionary.length} products from database`);
     }
   } catch (e) {
     console.error("Error loading existing dictionary:", e);
@@ -313,7 +315,6 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
       console.log("Processed transactions:", transactions.length);
       
       resolve({
-        // Return both existing and new products
         products: updatedProducts,
         transactions
       });

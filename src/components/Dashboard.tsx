@@ -1,6 +1,7 @@
 
 import FileUpload from './FileUpload';
 import FilterForm from './FilterForm';
+import DatabaseStatus from './DatabaseStatus';
 import { Card } from '@/components/ui/card';
 import { useAppContext } from '@/context/AppContext';
 
@@ -13,6 +14,8 @@ const Dashboard = () => {
         <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
         <p className="text-muted-foreground">Upload and process Partner Center exports</p>
       </div>
+      
+      <DatabaseStatus />
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <FileUpload />

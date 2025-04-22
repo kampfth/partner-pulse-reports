@@ -1,8 +1,7 @@
 
-// Utilizando Supabase ao invés de localStorage
-
 import { ProductItem, TransactionItem } from './fileService';
 import { supabase } from './supabaseClient';
+import { dbConfig } from '@/config/database';
 
 export interface ReportItem {
   name: string;
@@ -10,125 +9,202 @@ export interface ReportItem {
   productId?: string;
 }
 
-// Buscar dicionário de produtos do Supabase
+// Fetch product dictionary from Supabase
 export async function getProductDictionary(): Promise<ProductItem[]> {
   const { data, error } = await supabase
-    .from('products')
+    .from(dbConfig.tables.products)
     .select('*')
     .order('date', { ascending: false });
 
   if (error) {
-    console.error('Erro ao buscar dicionário de produtos do Supabase:', error);
+    console.error('Error fetching product dictionary from Supabase:', error);
     return [];
   }
+  console.log(`Loaded ${data?.length || 0} products from database`);
   return data || [];
 }
 
-// Buscar transações do Supabase
+// Fetch transactions from Supabase
 export async function getTransactions(): Promise<TransactionItem[]> {
   const { data, error } = await supabase
-    .from('transactions')
+    .from(dbConfig.tables.transactions)
     .select('*');
 
   if (error) {
-    console.error('Erro ao buscar transações do Supabase:', error);
+    console.error('Error fetching transactions from Supabase:', error);
     return [];
   }
+  console.log(`Loaded ${data?.length || 0} transactions from database`);
   return data || [];
 }
 
-// Salvar dicionário de produtos no Supabase
+// Save product dictionary to Supabase
 export async function saveProductDictionary(products: ProductItem[]): Promise<boolean> {
-  // Upsert (inseri novos e atualiza existentes)
+  console.log(`Saving ${products.length} products to database`);
+  
+  // Upsert (insert new and update existing)
   const { error } = await supabase
-    .from('products')
+    .from(dbConfig.tables.products)
     .upsert(products, { onConflict: 'productId', ignoreDuplicates: false });
 
-  // Atualiza tabela de echoProducts
-  const echoProducts = products.filter(product => product.isEcho);
-  if (echoProducts.length > 0) {
-    // Coloque sua lógica aqui se desejar manter uma tabela separada, exemplo: "echo_products"
-    await supabase.from('echo_products').upsert(echoProducts, { onConflict: 'productId' });
+  if (error) {
+    console.error('Error saving products to Supabase:', error);
+    return false;
   }
 
-  return !error;
+  // Update echo_products table
+  const echoProducts = products.filter(product => product.isEcho);
+  if (echoProducts.length > 0) {
+    console.log(`Saving ${echoProducts.length} echo products to database`);
+    
+    // First delete any echo products that are no longer marked as echo
+    const echoProductIds = echoProducts.map(p => p.productId);
+    
+    // Remove all echo products not in the current list
+    await supabase
+      .from(dbConfig.tables.echoProducts)
+      .delete()
+      .not('productId', 'in', `(${echoProductIds.map(id => `'${id}'`).join(',')})`);
+    
+    // Then upsert current echo products
+    const { error: echoError } = await supabase
+      .from(dbConfig.tables.echoProducts)
+      .upsert(
+        echoProducts.map(p => ({
+          productId: p.productId,
+          productName: p.productName,
+          date: p.date
+        })),
+        { onConflict: 'productId' }
+      );
+    
+    if (echoError) {
+      console.error('Error saving echo products to Supabase:', echoError);
+      return false;
+    }
+  }
+
+  return true;
 }
 
-// Salvar transações (substituindo ou inserindo)
+// Save transactions to Supabase
 export async function saveTransactions(transactions: TransactionItem[]): Promise<boolean> {
+  console.log(`Saving ${transactions.length} transactions to database`);
+  
   const { error } = await supabase
-    .from('transactions')
+    .from(dbConfig.tables.transactions)
     .upsert(transactions, { onConflict: 'productId,transactionDate' });
-  return !error;
+  
+  if (error) {
+    console.error('Error saving transactions to Supabase:', error);
+    return false;
+  }
+  
+  return true;
 }
 
-// Atualiza dicionário de produtos e transactions ao processar CSV
+// Update product dictionary and transactions when processing CSV
 export async function updateProductFromCSV(processedData: { products: ProductItem[], transactions: TransactionItem[] }): Promise<boolean> {
-  // Pega dicionário existente
+  // Get existing dictionary
   const existingDictionary = await getProductDictionary();
   const existingProductMap = new Map<string, ProductItem>();
   existingDictionary.forEach(product => {
     existingProductMap.set(product.productId, product);
   });
+  
+  // Merge existing products with new ones
   const mergedProducts: ProductItem[] = [...existingDictionary];
 
-  // Adiciona só produtos NOVOS
+  // Add only NEW products
   processedData.products.forEach(newProduct => {
     if (!existingProductMap.has(newProduct.productId)) {
       mergedProducts.push(newProduct);
     }
   });
 
-  await saveProductDictionary(mergedProducts);
-  await saveTransactions(processedData.transactions);
+  // Save merged products and transactions
+  const productsSaved = await saveProductDictionary(mergedProducts);
+  const transactionsSaved = await saveTransactions(processedData.transactions);
 
-  return true;
+  return productsSaved && transactionsSaved;
 }
 
-// Geração do relatório
+// Generate report from database
 export async function generateReport(
   startDate?: string,
   endDate?: string,
   echoOnly?: boolean
 ): Promise<ReportItem[]> {
+  console.log(`Generating report with filters: startDate=${startDate}, endDate=${endDate}, echoOnly=${echoOnly}`);
+  
+  // Get product dictionary
   const dictionary = await getProductDictionary();
-  let transactions = await getTransactions();
-
-  // Filtrar conforme data e echoOnly
+  
+  // Build transactions query
+  let query = supabase.from(dbConfig.tables.transactions).select('*');
+  
+  // Apply date filters
   if (startDate) {
-    transactions = transactions.filter(t => t.transactionDate >= startDate);
+    query = query.gte('transactionDate', startDate);
   }
   if (endDate) {
-    transactions = transactions.filter(t => t.transactionDate <= endDate);
+    query = query.lte('transactionDate', endDate);
   }
+  
+  // Apply echo filter if needed
   if (echoOnly) {
     const echoIds = dictionary.filter(p => p.isEcho).map(p => p.productId);
-    transactions = transactions.filter(t => echoIds.includes(t.productId));
+    if (echoIds.length > 0) {
+      query = query.in('productId', echoIds);
+    } else {
+      // If no echo products exist, return empty report
+      console.log('No echo products found in dictionary, returning empty report');
+      return [];
+    }
   }
-
+  
+  // Execute query
+  const { data: transactions, error } = await query;
+  
+  if (error) {
+    console.error('Error fetching transactions for report:', error);
+    return [];
+  }
+  
+  console.log(`Loaded ${transactions?.length || 0} transactions for report`);
+  
+  // Process transactions to calculate report data
   const productTotals = new Map<string, { amount: number; name: string }>();
-  transactions.forEach(transaction => {
+  
+  (transactions || []).forEach(transaction => {
     if (!transaction.productId || !transaction.productName) return;
+    
     const key = transaction.productId;
     const currentEntry = productTotals.get(key) || { amount: 0, name: transaction.productName };
     const transactionAmount = transaction.transactionAmount;
+    
     currentEntry.amount += typeof transactionAmount === 'number'
       ? transactionAmount
       : parseFloat(String(transactionAmount).replace(/[^0-9.-]+/g, '')) || 0;
 
+    // Use dictionary name if available
     const dictProduct = dictionary.find(p => p.productId === transaction.productId);
     if (dictProduct) {
       currentEntry.name = dictProduct.productName;
     }
+    
     productTotals.set(key, currentEntry);
   });
 
+  // Convert to report items and sort by total
   const reportData: ReportItem[] = Array.from(productTotals.entries()).map(([productId, data]) => ({
     name: data.name,
     total: parseFloat(data.amount.toFixed(2)),
     productId
   }));
+  
   reportData.sort((a, b) => b.total - a.total);
-
+  console.log(`Generated report with ${reportData.length} items`);
+  
   return reportData;
 }
