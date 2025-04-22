@@ -3,15 +3,13 @@ import { useState, useRef } from 'react';
 import { Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
-import { uploadFile, processFile } from '@/services/fileService';
-import { updateProductFromCSV } from '@/services/reportService';
+import { uploadFile } from '@/services/fileService';
 import { toast } from 'sonner';
 
 const FileUpload = () => {
-  const { fileStatus, setFileStatus } = useAppContext();
+  const { fileStatus, setFileStatus, setActiveSection, setUploadedFilePath } = useAppContext();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,6 +42,12 @@ const FileUpload = () => {
   const handleButtonClick = () => {
     // Trigger click on hidden file input
     fileInputRef.current?.click();
+  };
+
+  const handleReportClick = () => {
+    if (fileStatus === 'processed') {
+      setActiveSection('reports');
+    }
   };
 
   return (
@@ -92,7 +96,10 @@ const FileUpload = () => {
           </p>
           
           {fileStatus === 'processed' && (
-            <p className="text-sm text-blue-400 cursor-pointer hover:underline">
+            <p 
+              className="text-sm text-blue-400 cursor-pointer hover:underline"
+              onClick={handleReportClick}
+            >
               Click here to see report
             </p>
           )}

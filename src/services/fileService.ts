@@ -1,5 +1,4 @@
-
-interface FileUploadResponse {
+export interface FileUploadResponse {
   success: boolean;
   message: string;
   filePath?: string;
@@ -32,7 +31,7 @@ export async function uploadFile(file: File): Promise<FileUploadResponse> {
   });
 }
 
-interface ProcessedData {
+export interface ProcessedData {
   products: ProductItem[];
   transactions: TransactionItem[];
 }
@@ -97,6 +96,20 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
           transactionDate: "2023-01-09", 
           transactionAmountUSD: 1652.25 
         },
+        { 
+          productId: "P-567", 
+          productName: "Weather Presets", 
+          lever: "Microsoft Flight Simulator", 
+          transactionDate: "2023-06-12", 
+          transactionAmountUSD: 123.45 
+        },
+        { 
+          productId: "P-678", 
+          productName: "Airliner Pack", 
+          lever: "Microsoft Flight Simulator 2024", 
+          transactionDate: "2023-07-20", 
+          transactionAmountUSD: 98.00 
+        },
       ];
       
       // Process transaction data according to business rules
@@ -109,28 +122,35 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
       let updatedProducts = [...existingProducts];
       
       mockCSVData.forEach(transaction => {
+        // Skip rows missing productId or productName
+        if (!transaction.productId || !transaction.productName) {
+          return;
+        }
+        
         // Check if product exists
         const existingProduct = updatedProducts.find(p => p.productId === transaction.productId);
         
         if (!existingProduct) {
           // Create new product entry
-          const newProduct = {
-            productId: transaction.productId,
-            productName: transaction.productName,
-            date: transaction.transactionDate,
-            isEcho: false // Default new products to non-echo
-          };
+          let newProductName = transaction.productName;
           
           // If lever contains "2024" and a product with same name exists, append (2024)
-          if (transaction.lever.includes("2024")) {
+          if (transaction.lever === "Microsoft Flight Simulator 2024") {
             const similarProduct = updatedProducts.find(p => 
               p.productName === transaction.productName && !p.productName.includes("(2024)")
             );
             
             if (similarProduct) {
-              newProduct.productName += " (2024)";
+              newProductName += " (2024)";
             }
           }
+          
+          const newProduct = {
+            productId: transaction.productId,
+            productName: newProductName,
+            date: transaction.transactionDate,
+            isEcho: false // Default new products to non-echo
+          };
           
           updatedProducts.push(newProduct);
         }
@@ -143,4 +163,3 @@ export async function processFile(filePath: string): Promise<ProcessedData> {
     }, 2000);
   });
 }
-

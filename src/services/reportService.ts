@@ -1,5 +1,5 @@
 
-import { ProcessedData, TransactionItem, ProductItem } from './fileService';
+import { ProductItem, TransactionItem } from './fileService';
 
 export interface ReportItem {
   name: string;
@@ -20,6 +20,11 @@ export async function generateReport(
   
   // Filter transactions based on date range
   const filteredTransactions = transactions.filter(transaction => {
+    // Skip rows missing productId or productName
+    if (!transaction.productId || !transaction.productName) {
+      return false;
+    }
+    
     if (startDate && transaction.transactionDate < startDate) {
       return false;
     }
@@ -73,6 +78,8 @@ export async function getProductDictionary(): Promise<ProductItem[]> {
         { productId: "P-789", productName: "Azure Cloud Services Premium", date: "2023-02-21", isEcho: true },
         { productId: "P-012", productName: "Windows 11 Pro", date: "2022-09-17", isEcho: false },
         { productId: "P-345", productName: "Microsoft Dynamics 365", date: "2023-01-09", isEcho: false },
+        { productId: "P-567", productName: "Weather Presets", date: "2023-06-12", isEcho: false },
+        { productId: "P-678", productName: "Airliner Pack (2024)", date: "2023-07-20", isEcho: false },
       ];
       
       resolve(mockDictionary);
@@ -121,6 +128,20 @@ export async function getTransactions(): Promise<TransactionItem[]> {
           transactionDate: "2023-01-09", 
           transactionAmountUSD: 1652.25 
         },
+        { 
+          productId: "P-567", 
+          productName: "Weather Presets", 
+          lever: "Microsoft Flight Simulator", 
+          transactionDate: "2023-06-12", 
+          transactionAmountUSD: 123.45 
+        },
+        { 
+          productId: "P-678", 
+          productName: "Airliner Pack", 
+          lever: "Microsoft Flight Simulator 2024", 
+          transactionDate: "2023-07-20", 
+          transactionAmountUSD: 98.00 
+        },
       ];
       
       resolve(mockTransactions);
@@ -142,7 +163,7 @@ export async function saveProductDictionary(products: ProductItem[]): Promise<bo
   });
 }
 
-export async function updateProductFromCSV(processedData: ProcessedData): Promise<boolean> {
+export async function updateProductFromCSV(processedData: { products: ProductItem[], transactions: TransactionItem[] }): Promise<boolean> {
   // Simulate updating the product dictionary with new data from CSV
   return new Promise((resolve) => {
     setTimeout(() => {

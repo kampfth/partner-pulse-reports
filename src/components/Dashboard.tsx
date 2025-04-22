@@ -26,8 +26,10 @@ const Dashboard = () => {
             The file has been processed successfully. You can now view the report by clicking the "View Report" button in the Filter section.
           </p>
           <ul className="list-disc list-inside mt-4 space-y-2 text-sm text-muted-foreground">
+            <li>CSV file was loaded from uploads/latest.csv</li>
             <li>Product dictionary updated with new entries</li>
             <li>Products marked as Echo are identified</li>
+            <li>Products with lever "Microsoft Flight Simulator 2024" have been marked with (2024) suffix</li>
             <li>Transaction data is ready for reporting</li>
           </ul>
         </Card>
